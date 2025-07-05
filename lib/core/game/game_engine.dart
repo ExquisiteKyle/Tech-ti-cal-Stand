@@ -241,6 +241,9 @@ class _GameEngineState extends ConsumerState<GameEngine> {
           // Top HUD - positioned in top-left corner
           _buildTopHUD(gameState),
 
+          // Tower upgrade panel - positioned in center-right
+          _buildTowerUpgradePanel(gameState),
+
           // Bottom controls - centered at bottom
           Positioned(
             bottom: 0,
@@ -279,6 +282,226 @@ class _GameEngineState extends ConsumerState<GameEngine> {
         gold: gameState.gold,
         score: gameState.score,
         enemiesInField: _entityManager.getEntitiesOfType<Enemy>().length,
+      ),
+    );
+  }
+
+  Widget _buildTowerUpgradePanel(GameState gameState) {
+    final towerSelection = ref.watch(towerSelectionProvider);
+
+    if (!towerSelection.hasTowerSelected) {
+      return Container(); // No tower selected
+    }
+
+    final selectedTower = towerSelection.selectedTower!;
+
+    return Positioned(
+      right: 16,
+      top: MediaQuery.of(context).size.height * 0.3,
+      child: Container(
+        width: 280,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0E6FF).withAlpha(240),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFD4C5E8), width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(100),
+              blurRadius: 15,
+              offset: const Offset(-5, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Tower info header
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: selectedTower.towerColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.black, width: 2),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        selectedTower.name,
+                        style: const TextStyle(
+                          color: Color(0xFF4A4A4A),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Level ${selectedTower.upgradeLevel}',
+                        style: const TextStyle(
+                          color: Color(0xFF8B8B8B),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () {
+                    ref.read(towerSelectionProvider.notifier).clearSelection();
+                  },
+                  icon: const Icon(Icons.close, color: Color(0xFF8B8B8B)),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Current stats
+            _buildStatRow('Damage', selectedTower.damage.toInt().toString()),
+            _buildStatRow('Range', selectedTower.range.toInt().toString()),
+            _buildStatRow(
+              'Attack Speed',
+              selectedTower.attackSpeed.toStringAsFixed(1),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Upgrade options
+            if (selectedTower.upgradeLevel < 3) ...[
+              const Text(
+                'Upgrade Paths',
+                style: TextStyle(
+                  color: Color(0xFF4A4A4A),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              _buildUpgradeOption(selectedTower, UpgradePath.path1, gameState),
+              const SizedBox(height: 8),
+              _buildUpgradeOption(selectedTower, UpgradePath.path2, gameState),
+            ] else ...[
+              const Text(
+                'Max Level Reached',
+                style: TextStyle(
+                  color: Color(0xFF8B8B8B),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(color: Color(0xFF8B8B8B), fontSize: 12),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Color(0xFF4A4A4A),
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpgradeOption(
+    Tower tower,
+    UpgradePath path,
+    GameState gameState,
+  ) {
+    final upgradeCost = tower.getUpgradeCost();
+    final canAfford = gameState.canAfford(upgradeCost);
+    final descriptions = tower.getUpgradeDescriptions();
+    final pathIndex = path == UpgradePath.path1 ? 0 : 1;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: canAfford
+            ? const Color(0xFFE8F5E8).withAlpha(150)
+            : const Color(0xFFF5F5F5).withAlpha(150),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: canAfford ? const Color(0xFF90EE90) : const Color(0xFFD0D0D0),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            descriptions[pathIndex],
+            style: TextStyle(
+              color: canAfford
+                  ? const Color(0xFF4A4A4A)
+                  : const Color(0xFF8B8B8B),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${upgradeCost}G',
+                style: TextStyle(
+                  color: canAfford
+                      ? const Color(0xFF006400)
+                      : const Color(0xFF8B8B8B),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              ElevatedButton(
+                onPressed: canAfford ? () => _upgradeTower(tower, path) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: canAfford
+                      ? const Color(0xFF90EE90)
+                      : const Color(0xFFD0D0D0),
+                  foregroundColor: canAfford
+                      ? const Color(0xFF006400)
+                      : const Color(0xFF8B8B8B),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  minimumSize: const Size(80, 32),
+                ),
+                child: const Text(
+                  'Upgrade',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -479,6 +702,34 @@ class _GameEngineState extends ConsumerState<GameEngine> {
     setState(() {
       // Any local state resets
     });
+  }
+
+  void _upgradeTower(Tower tower, UpgradePath path) {
+    final gameStateNotifier = ref.read(gameStateProvider.notifier);
+
+    final upgradeCost = tower.getUpgradeCost();
+
+    // Check if player can afford the upgrade
+    if (gameStateNotifier.spendGold(upgradeCost)) {
+      // Perform the upgrade
+      final upgraded = tower.upgrade(path);
+
+      if (upgraded) {
+        print(
+          'Upgraded ${tower.name} to level ${tower.upgradeLevel} with path ${path.toString()}',
+        );
+        print(
+          'New stats - Damage: ${tower.damage}, Range: ${tower.range}, Speed: ${tower.attackSpeed}',
+        );
+
+        // Keep the tower selected to show updated stats
+        // User can close the panel manually if desired
+      } else {
+        // Upgrade failed, refund the gold
+        gameStateNotifier.addGold(upgradeCost);
+        print('Upgrade failed for ${tower.name}');
+      }
+    }
   }
 
   Widget _buildGameControls(GameState gameState) {

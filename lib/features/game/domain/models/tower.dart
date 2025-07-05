@@ -170,6 +170,34 @@ abstract class Tower extends Entity {
       }
     }
   }
+
+  /// Render tower with selection indicator
+  void renderWithSelection(Canvas canvas, Size canvasSize, bool isSelected) {
+    // Draw selection indicator first (so it's behind the tower)
+    if (isSelected) {
+      final selectionPaint = Paint()
+        ..color = Colors.lightBlue.withAlpha(150)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4;
+
+      canvas.drawCircle(
+        Offset(center.x, center.y),
+        size.x / 2 + 8,
+        selectionPaint,
+      );
+
+      // Draw range indicator when selected
+      final rangePaint = Paint()
+        ..color = Colors.lightBlue.withAlpha(80)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2;
+
+      canvas.drawCircle(Offset(center.x, center.y), range, rangePaint);
+    }
+
+    // Render normal tower
+    render(canvas, canvasSize);
+  }
 }
 
 /// Archer Tower - Fast attacks, good against light enemies

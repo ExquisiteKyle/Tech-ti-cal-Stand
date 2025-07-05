@@ -78,12 +78,22 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
     );
 
     final towerSelection = ref.read(towerSelectionProvider);
+    final towerSelectionNotifier = ref.read(towerSelectionProvider.notifier);
 
-    if (towerSelection.isSelecting &&
-        towerSelection.selectedTowerType != null) {
+    if (towerSelection.isPlacingTower) {
+      // Place new tower
       _placeTower(position, towerSelection.selectedTowerType!);
     } else {
-      widget.onTap?.call();
+      // Check if clicking on existing tower
+      final clickedTower = _getTowerAtPosition(position);
+      if (clickedTower != null) {
+        // Select tower for upgrade
+        towerSelectionNotifier.selectExistingTower(clickedTower);
+      } else {
+        // Clear selection if clicking empty space
+        towerSelectionNotifier.clearSelection();
+        widget.onTap?.call();
+      }
     }
   }
 
@@ -175,6 +185,17 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
     return true;
   }
 
+  /// Find tower at given position (for tower selection)
+  Tower? _getTowerAtPosition(Vector2 position) {
+    final towers = widget.entityManager.getEntitiesOfType<Tower>();
+    for (final tower in towers) {
+      if (tower.containsPoint(position)) {
+        return tower;
+      }
+    }
+    return null;
+  }
+
   void _updateGame() {
     // Game update logic is now handled by the GameEngine
     // This method is kept for future canvas-specific updates if needed
@@ -196,6 +217,7 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
               selectedTowerType: towerSelection.selectedTowerType,
               towerPreviewPosition: _towerPreviewPosition,
               isDragActive: candidateData.isNotEmpty,
+              selectedTower: towerSelection.selectedTower,
             ),
             size: Size.infinite,
             child: Container(), // Transparent container to capture gestures
@@ -270,6 +292,7 @@ class GameCanvasPainter extends CustomPainter {
   final TowerType? selectedTowerType;
   final Vector2? towerPreviewPosition;
   final bool isDragActive;
+  final Tower? selectedTower;
 
   GameCanvasPainter({
     required this.entityManager,
@@ -277,6 +300,7 @@ class GameCanvasPainter extends CustomPainter {
     this.selectedTowerType,
     this.towerPreviewPosition,
     this.isDragActive = false,
+    this.selectedTower,
   });
 
   @override
@@ -287,8 +311,8 @@ class GameCanvasPainter extends CustomPainter {
     // Draw path
     _drawPath(canvas, size);
 
-    // Draw entities (towers, enemies, projectiles)
-    entityManager.render(canvas, size);
+    // Draw entities with special handling for tower selection
+    _renderEntitiesWithSelection(canvas, size);
 
     // Draw tower preview
     if (selectedTowerType != null && towerPreviewPosition != null) {
@@ -479,6 +503,24 @@ class GameCanvasPainter extends CustomPainter {
     }
 
     return true;
+  }
+
+  /// Render entities with special tower selection handling
+  void _renderEntitiesWithSelection(Canvas canvas, Size size) {
+    final entities = entityManager.entities;
+
+    for (final entity in entities) {
+      if (!entity.isActive || !entity.isVisible) continue;
+
+      if (entity is Tower) {
+        // Use selection-aware rendering for towers
+        final isSelected = selectedTower?.id == entity.id;
+        entity.renderWithSelection(canvas, size, isSelected);
+      } else {
+        // Use normal rendering for other entities
+        entity.render(canvas, size);
+      }
+    }
   }
 
   @override
