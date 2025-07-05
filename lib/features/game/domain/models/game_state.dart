@@ -17,7 +17,7 @@ class GameState extends Equatable {
 
   const GameState({
     this.status = GameStatus.menu,
-    this.gold = 100,
+    this.gold = 300, // Increased from 100 to 300 for better early game
     this.lives = 20,
     this.wave = 1,
     this.score = 0,
@@ -30,7 +30,7 @@ class GameState extends Equatable {
   /// Create initial game state
   factory GameState.initial() => GameState(
     status: GameStatus.menu,
-    gold: 100,
+    gold: 300, // Increased starting gold for better early game
     lives: 20,
     wave: 1,
     score: 0,
@@ -129,6 +129,7 @@ class GameState extends Equatable {
 
   // Convenience methods
   bool canAfford(int cost) => gold >= cost;
+  bool get hasLivesRemaining => lives > 0;
 
   @override
   List<Object?> get props => [

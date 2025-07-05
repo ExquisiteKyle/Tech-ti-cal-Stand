@@ -10,6 +10,7 @@ class MMORPGPlayerUI extends StatefulWidget {
   final int maxMana;
   final int gold;
   final int score;
+  final int enemiesInField;
   final String? portraitAsset;
 
   const MMORPGPlayerUI({
@@ -22,6 +23,7 @@ class MMORPGPlayerUI extends StatefulWidget {
     required this.maxMana,
     required this.gold,
     required this.score,
+    required this.enemiesInField,
     this.portraitAsset,
   });
 
@@ -505,6 +507,16 @@ class _MMORPGPlayerUIState extends State<MMORPGPlayerUI>
           label: 'Score',
           value: widget.score.toString(),
           color: const Color(0xFFDDA0DD),
+        ),
+
+        const SizedBox(width: 8),
+
+        // Enemy Counter
+        _buildResourceItem(
+          icon: Icons.bug_report,
+          label: 'Enemies',
+          value: widget.enemiesInField.toString(),
+          color: const Color(0xFFFF6B6B),
         ),
       ],
     );

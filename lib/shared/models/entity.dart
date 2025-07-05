@@ -45,8 +45,8 @@ abstract class Entity {
         position.y + size.y > other.position.y;
   }
 
-  /// Get the distance to another entity
-  double distanceTo(Entity other) => position.distanceTo(other.position);
+  /// Get the distance to another entity (center to center)
+  double distanceTo(Entity other) => center.distanceTo(other.center);
 
   /// Get the center point of the entity
   Vector2 get center =>

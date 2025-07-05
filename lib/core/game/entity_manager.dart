@@ -51,6 +51,17 @@ class EntityManager {
     }
 
     // Remove inactive entities
+    final inactiveEntities = _entities
+        .where((entity) => !entity.isActive)
+        .toList();
+    if (inactiveEntities.isNotEmpty) {
+      print(
+        'EntityManager removing ${inactiveEntities.length} inactive entities',
+      );
+      for (final entity in inactiveEntities) {
+        print('Removing inactive entity: ${entity.runtimeType}');
+      }
+    }
     _entities.removeWhere((entity) => !entity.isActive);
   }
 

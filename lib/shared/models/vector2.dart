@@ -28,6 +28,15 @@ class Vector2 {
     return mag == 0 ? Vector2.zero() : Vector2(x / mag, y / mag);
   }
 
+  /// Normalize this vector in place
+  void normalize() {
+    final mag = magnitude;
+    if (mag != 0) {
+      x /= mag;
+      y /= mag;
+    }
+  }
+
   double distanceTo(Vector2 other) {
     final dx = x - other.x;
     final dy = y - other.y;
