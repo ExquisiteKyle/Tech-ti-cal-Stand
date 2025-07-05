@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_colors.dart';
+import 'core/game/game_engine.dart';
 
 void main() {
   runApp(const ProviderScope(child: TechticalStandApp()));
@@ -14,50 +15,30 @@ class TechticalStandApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     title: AppConstants.appName,
     theme: ThemeData(
-      primarySwatch: Colors.blue,
-      primaryColor: AppColors.primaryGold,
-      scaffoldBackgroundColor: AppColors.backgroundLight,
+      primarySwatch: Colors.purple,
+      primaryColor: AppColors.pastelLavender,
+      scaffoldBackgroundColor: AppColors.backgroundSoft,
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.backgroundDark,
-        foregroundColor: AppColors.textLight,
+        backgroundColor: AppColors.hudBackground,
+        foregroundColor: AppColors.textDark,
+        elevation: 0,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.buttonPrimary,
+          foregroundColor: AppColors.textDark,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        ),
+      ),
+      cardTheme: CardThemeData(
+        color: AppColors.backgroundCard,
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     ),
-    home: const GameScreen(),
-  );
-}
-
-class GameScreen extends StatelessWidget {
-  const GameScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text(AppConstants.appName), centerTitle: true),
-    body: const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.games, size: 100, color: AppColors.primaryGold),
-          SizedBox(height: 20),
-          Text(
-            'Techtical Stand',
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          SizedBox(height: 10),
-          Text(
-            'Tower Defense Game',
-            style: TextStyle(fontSize: 18, color: AppColors.textSecondary),
-          ),
-          SizedBox(height: 40),
-          Text(
-            'Game engine coming soon...',
-            style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
-          ),
-        ],
-      ),
-    ),
+    home: const GameEngine(),
   );
 }
