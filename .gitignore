@@ -47,3 +47,22 @@ app.*.map.json
 
 # Project-specific
 docs/RELEASE_PLAN.md
+
+# Generated files
+**/generated_plugin_registrant.h
+**/generated_plugin_registrant.cc
+**/generated_plugins.cmake
+**/generated_config.cmake
+**/flutter/generated_*
+**/ephemeral/
+**/generated_*
+**/flutter/generated_*
+**/windows/flutter/generated_*
+**/linux/flutter/generated_*
+**/macos/Flutter/generated_*
+**/ios/Flutter/generated_*
+**/android/.gradle/
+**/android/app/build/
+macos/Flutter/GeneratedPluginRegistrant.swift
+
+.cursorrules
