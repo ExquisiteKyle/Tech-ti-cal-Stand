@@ -407,7 +407,7 @@ class _LevelSelectionScreenState extends ConsumerState<LevelSelectionScreen>
                       ),
                     ),
 
-                    const Spacer(),
+                    const SizedBox(height: 12),
 
                     // Difficulty stars
                     Row(

@@ -72,7 +72,7 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen>
             color: AppColors.textPrimary,
           ),
         ),
-        const Spacer(),
+        const Expanded(child: SizedBox()),
         IconButton(
           onPressed: () => _showAchievementStats(),
           icon: const Icon(Icons.info_outline, color: AppColors.textPrimary),

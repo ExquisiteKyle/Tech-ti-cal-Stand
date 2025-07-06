@@ -90,15 +90,18 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
               scale: _scaleAnimation,
               child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    const Spacer(flex: 2),
-                    _buildTitle(),
-                    const Spacer(),
-                    _buildMenuButtons(),
-                    const Spacer(),
-                    _buildFooter(),
-                  ],
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 40),
+                      _buildTitle(),
+                      const SizedBox(height: 40),
+                      _buildMenuButtons(),
+                      const SizedBox(height: 40),
+                      _buildFooter(),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -194,7 +197,9 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
                       borderRadius: BorderRadius.circular(10),
                       child: LinearProgressIndicator(
                         value: progress,
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.2,
+                        ),
                         valueColor: AlwaysStoppedAnimation<Color>(
                           AppColors.secondary,
                         ),
@@ -277,7 +282,10 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isPrimary
-                ? [AppColors.secondary, AppColors.secondary.withValues(alpha: 0.8)]
+                ? [
+                    AppColors.secondary,
+                    AppColors.secondary.withValues(alpha: 0.8),
+                  ]
                 : [
                     Colors.white.withValues(alpha: 0.9),
                     Colors.white.withValues(alpha: 0.7),

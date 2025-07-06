@@ -37,7 +37,7 @@ dependencies:
   flutter_riverpod: ^2.5.1
 
   # Audio
-  audioplayers: ^6.0.0
+  just_audio: ^0.9.36
 
   # Storage
   shared_preferences: ^2.2.3

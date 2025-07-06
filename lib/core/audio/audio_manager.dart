@@ -1,4 +1,4 @@
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -76,7 +76,6 @@ class AudioManager {
 
       // Initialize music player
       _musicPlayer = AudioPlayer();
-      await _musicPlayer!.setReleaseMode(ReleaseMode.loop);
 
       _isInitialized = true;
       debugPrint('AudioManager initialized successfully');
@@ -135,7 +134,6 @@ class AudioManager {
       _soundPool[event] = [];
       for (int i = 0; i < _maxPoolSize; i++) {
         final player = AudioPlayer();
-        await player.setReleaseMode(ReleaseMode.stop);
         _soundPool[event]!.add(player);
       }
     }
@@ -155,7 +153,7 @@ class AudioManager {
         // Find an available player
         AudioPlayer? availablePlayer;
         for (final player in pool) {
-          if (player.state != PlayerState.playing) {
+          if (player.playing == false) {
             availablePlayer = player;
             break;
           }
@@ -175,8 +173,10 @@ class AudioManager {
         await _playSynthesizedSound(event, player);
 
         // Clean up after playing
-        player.onPlayerComplete.listen((_) {
-          player.dispose();
+        player.playerStateStream.listen((state) {
+          if (state.processingState == ProcessingState.completed) {
+            player.dispose();
+          }
         });
       }
     } catch (e) {
@@ -250,124 +250,126 @@ class AudioManager {
 
     try {
       await _musicPlayer!.setVolume(_musicVolume * _masterVolume);
-      await _musicPlayer!.setReleaseMode(
-        loop ? ReleaseMode.loop : ReleaseMode.stop,
-      );
+      await _musicPlayer!.setLoopMode(loop ? LoopMode.all : LoopMode.off);
 
       // For now, just log the music event
       debugPrint('🎵 Playing music: ${musicEvent.name}');
 
-      // In a real implementation:
-      // await _musicPlayer!.play(AssetSource(_audioCache[musicEvent]!));
+      // In a real implementation, you would load and play the actual audio file
+      // final audioPath = _audioCache[musicEvent];
+      // if (audioPath != null) {
+      //   await _musicPlayer!.setAsset(audioPath);
+      //   await _musicPlayer!.play();
+      // }
     } catch (e) {
       debugPrint('Error playing music $musicEvent: $e');
     }
   }
 
-  /// Stop background music
-  Future<void> stopMusic() async {
-    if (_musicPlayer != null) {
-      await _musicPlayer!.stop();
-    }
-  }
-
   /// Pause background music
   Future<void> pauseMusic() async {
-    if (_musicPlayer != null) {
+    if (!_isInitialized || _musicPlayer == null) return;
+
+    try {
       await _musicPlayer!.pause();
+    } catch (e) {
+      debugPrint('Error pausing music: $e');
     }
   }
 
   /// Resume background music
   Future<void> resumeMusic() async {
-    if (_musicPlayer != null) {
-      await _musicPlayer!.resume();
+    if (!_isInitialized || _musicPlayer == null) return;
+
+    try {
+      await _musicPlayer!.play();
+    } catch (e) {
+      debugPrint('Error resuming music: $e');
     }
   }
 
-  /// Set master volume (affects all audio)
-  Future<void> setMasterVolume(double volume) async {
+  /// Stop background music
+  Future<void> stopMusic() async {
+    if (!_isInitialized || _musicPlayer == null) return;
+
+    try {
+      await _musicPlayer!.stop();
+    } catch (e) {
+      debugPrint('Error stopping music: $e');
+    }
+  }
+
+  /// Set master volume
+  void setMasterVolume(double volume) {
     _masterVolume = volume.clamp(0.0, 1.0);
-    await _saveAudioSettings();
-    await _updateAllVolumes();
+    _saveAudioSettings();
   }
 
   /// Set SFX volume
-  Future<void> setSfxVolume(double volume) async {
+  void setSfxVolume(double volume) {
     _sfxVolume = volume.clamp(0.0, 1.0);
-    await _saveAudioSettings();
+    _saveAudioSettings();
   }
 
   /// Set music volume
-  Future<void> setMusicVolume(double volume) async {
+  void setMusicVolume(double volume) {
     _musicVolume = volume.clamp(0.0, 1.0);
-    await _saveAudioSettings();
-    if (_musicPlayer != null) {
-      await _musicPlayer!.setVolume(_musicVolume * _masterVolume);
-    }
+    _saveAudioSettings();
   }
 
-  /// Toggle mute for all audio
-  Future<void> toggleMute() async {
+  /// Toggle mute
+  void toggleMute() {
     _isMuted = !_isMuted;
-    await _saveAudioSettings();
-    await _updateAllVolumes();
+    _saveAudioSettings();
   }
 
-  /// Toggle mute for music only
-  Future<void> toggleMusicMute() async {
+  /// Toggle music mute
+  void toggleMusicMute() {
     _isMusicMuted = !_isMusicMuted;
-    await _saveAudioSettings();
-
-    if (_isMusicMuted) {
-      await pauseMusic();
-    } else {
-      await resumeMusic();
+    if (_isMusicMuted && _musicPlayer != null) {
+      _musicPlayer!.pause();
     }
+    _saveAudioSettings();
   }
 
-  /// Update volumes for all active players
-  Future<void> _updateAllVolumes() async {
-    final effectiveVolume = _isMuted ? 0.0 : _masterVolume;
+  /// Get master volume
+  double get masterVolume => _masterVolume;
 
-    // Update music volume
-    if (_musicPlayer != null) {
-      await _musicPlayer!.setVolume(
-        _isMusicMuted ? 0.0 : _musicVolume * effectiveVolume,
-      );
-    }
+  /// Get SFX volume
+  double get sfxVolume => _sfxVolume;
 
-    // Update sound pool volumes
-    for (final pool in _soundPool.values) {
-      for (final player in pool) {
-        await player.setVolume(_sfxVolume * effectiveVolume);
-      }
-    }
-  }
+  /// Get music volume
+  double get musicVolume => _musicVolume;
 
-  /// Load audio settings from shared preferences
+  /// Check if audio is muted
+  bool get isMuted => _isMuted;
+
+  /// Check if music is muted
+  bool get isMusicMuted => _isMusicMuted;
+
+  /// Load audio settings from SharedPreferences
   Future<void> _loadAudioSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _masterVolume = prefs.getDouble('audio_master_volume') ?? 1.0;
-      _sfxVolume = prefs.getDouble('audio_sfx_volume') ?? 1.0;
-      _musicVolume = prefs.getDouble('audio_music_volume') ?? 0.7;
-      _isMuted = prefs.getBool('audio_is_muted') ?? false;
-      _isMusicMuted = prefs.getBool('audio_is_music_muted') ?? false;
+      _masterVolume = prefs.getDouble('master_volume') ?? 1.0;
+      _sfxVolume = prefs.getDouble('sfx_volume') ?? 1.0;
+      _musicVolume = prefs.getDouble('music_volume') ?? 0.7;
+      _isMuted = prefs.getBool('is_muted') ?? false;
+      _isMusicMuted = prefs.getBool('is_music_muted') ?? false;
     } catch (e) {
       debugPrint('Error loading audio settings: $e');
     }
   }
 
-  /// Save audio settings to shared preferences
+  /// Save audio settings to SharedPreferences
   Future<void> _saveAudioSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setDouble('audio_master_volume', _masterVolume);
-      await prefs.setDouble('audio_sfx_volume', _sfxVolume);
-      await prefs.setDouble('audio_music_volume', _musicVolume);
-      await prefs.setBool('audio_is_muted', _isMuted);
-      await prefs.setBool('audio_is_music_muted', _isMusicMuted);
+      await prefs.setDouble('master_volume', _masterVolume);
+      await prefs.setDouble('sfx_volume', _sfxVolume);
+      await prefs.setDouble('music_volume', _musicVolume);
+      await prefs.setBool('is_muted', _isMuted);
+      await prefs.setBool('is_music_muted', _isMusicMuted);
     } catch (e) {
       debugPrint('Error saving audio settings: $e');
     }
@@ -375,38 +377,30 @@ class AudioManager {
 
   /// Dispose of all audio resources
   Future<void> dispose() async {
-    // Stop and dispose music player
-    if (_musicPlayer != null) {
-      await _musicPlayer!.stop();
-      await _musicPlayer!.dispose();
-      _musicPlayer = null;
-    }
+    try {
+      // Dispose of sound pool players
+      for (final pool in _soundPool.values) {
+        for (final player in pool) {
+          await player.dispose();
+        }
+      }
+      _soundPool.clear();
 
-    // Dispose sound pool players
-    for (final pool in _soundPool.values) {
-      for (final player in pool) {
-        await player.stop();
+      // Dispose of individual sound players
+      for (final player in _soundPlayers.values) {
         await player.dispose();
       }
-    }
-    _soundPool.clear();
+      _soundPlayers.clear();
 
-    // Dispose other sound players
-    for (final player in _soundPlayers.values) {
-      await player.stop();
-      await player.dispose();
-    }
-    _soundPlayers.clear();
+      // Dispose of music player
+      if (_musicPlayer != null) {
+        await _musicPlayer!.dispose();
+        _musicPlayer = null;
+      }
 
-    _isInitialized = false;
-    debugPrint('AudioManager disposed');
+      _isInitialized = false;
+    } catch (e) {
+      debugPrint('Error disposing audio manager: $e');
+    }
   }
-
-  // Getters for current settings
-  double get masterVolume => _masterVolume;
-  double get sfxVolume => _sfxVolume;
-  double get musicVolume => _musicVolume;
-  bool get isMuted => _isMuted;
-  bool get isMusicMuted => _isMusicMuted;
-  bool get isInitialized => _isInitialized;
 }
