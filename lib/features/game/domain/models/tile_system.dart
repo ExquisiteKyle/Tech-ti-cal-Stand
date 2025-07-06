@@ -9,6 +9,7 @@ enum TileState {
   blocked, // Path tile or invalid for placement
   highlighted, // Currently being hovered/previewed
   invalid, // Edge tiles that are outside viewport boundaries
+  preparationBlocked, // Blocked during preparation phase
 }
 
 /// Represents a single tile in the placement grid
@@ -56,6 +57,10 @@ class TileSystem {
   // Store the grid offset for world position calculations
   double _offsetX = 0.0;
   double _offsetY = 0.0;
+
+  // Store preparation blocking area
+  double? _preparationBlockTop;
+  double? _preparationBlockBottom;
 
   TileSystem({required this.gridWidth, required this.gridHeight}) : _grid = [];
 
@@ -107,6 +112,9 @@ class TileSystem {
           state = TileState.invalid;
         } else if (_isOnPath(worldPos, pathPoints)) {
           state = TileState.blocked;
+        } else if (_isTopBufferRow(y, topUIHeight, screenSize)) {
+          // Mark the top row of available tiles as invalid for visual separation
+          state = TileState.invalid;
         }
 
         row.add(
@@ -144,6 +152,17 @@ class TileSystem {
     }
 
     return false;
+  }
+
+  /// Check if this is the top buffer row that should be marked invalid
+  bool _isTopBufferRow(int gridY, double topUIHeight, Size screenSize) {
+    // Find the row that's one row above the first playable row
+    final firstPlayableY = topUIHeight + tileSize;
+    final bufferRowY = _offsetY + (gridY * tileSize) + (tileSize / 2);
+
+    // Mark the row that's one row above the first playable row as invalid
+    return bufferRowY >= (firstPlayableY - tileSize) &&
+        bufferRowY < firstPlayableY;
   }
 
   /// Check if a world position is on the path
@@ -240,7 +259,8 @@ class TileSystem {
     return tile != null &&
         (tile.state == TileState.empty ||
             tile.state == TileState.highlighted) &&
-        tile.state != TileState.invalid;
+        tile.state != TileState.invalid &&
+        tile.state != TileState.preparationBlocked;
   }
 
   /// Place a tower on a tile
@@ -284,4 +304,56 @@ class TileSystem {
       updateTile(gridX, gridY, TileState.highlighted);
     }
   }
+
+  /// Block tiles in the preparation notification area
+  void blockPreparationArea(double screenHeight, double bottomUIHeight) {
+    // Calculate the area where the preparation notification appears
+    // The notification is positioned at bottom: bottomHeight + 8
+    // With height of 60px (including padding)
+    final notificationTop = screenHeight - bottomUIHeight - 60;
+    final notificationBottom = screenHeight - bottomUIHeight + 8;
+
+    _preparationBlockTop = notificationTop;
+    _preparationBlockBottom = notificationBottom;
+
+    // Block tiles in this area
+    for (int y = 0; y < _grid.length; y++) {
+      for (int x = 0; x < _grid[y].length; x++) {
+        final tile = _grid[y][x];
+        final tileY = tile.worldPosition.y;
+
+        // Check if tile is in the preparation notification area
+        if (tileY >= notificationTop && tileY <= notificationBottom) {
+          // Only block empty tiles, don't affect already occupied or blocked tiles
+          if (tile.state == TileState.empty ||
+              tile.state == TileState.highlighted) {
+            updateTile(x, y, TileState.preparationBlocked);
+          }
+        }
+      }
+    }
+  }
+
+  /// Unblock tiles in the preparation notification area
+  void unblockPreparationArea() {
+    if (_preparationBlockTop == null || _preparationBlockBottom == null) return;
+
+    // Restore tiles that were blocked during preparation
+    for (int y = 0; y < _grid.length; y++) {
+      for (int x = 0; x < _grid[y].length; x++) {
+        final tile = _grid[y][x];
+
+        // Only restore tiles that were blocked during preparation
+        if (tile.state == TileState.preparationBlocked) {
+          updateTile(x, y, TileState.empty);
+        }
+      }
+    }
+
+    _preparationBlockTop = null;
+    _preparationBlockBottom = null;
+  }
+
+  /// Check if preparation area is currently blocked
+  bool get isPreparationAreaBlocked => _preparationBlockTop != null;
 }

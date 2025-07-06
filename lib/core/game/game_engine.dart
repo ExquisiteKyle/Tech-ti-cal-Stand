@@ -3,17 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'game_loop.dart';
 import 'entity_manager.dart';
 import '../rendering/game_canvas.dart';
+import '../theme/app_colors.dart';
 import '../widgets/mmorpg_player_ui.dart';
 import '../widgets/game_over_dialog.dart';
 import '../widgets/tower_upgrade_dialog.dart';
+import '../widgets/audio_settings_panel.dart';
+import '../audio/audio_manager.dart';
 import '../../features/game/presentation/providers/game_state_provider.dart';
 import '../../features/game/presentation/providers/tower_selection_provider.dart';
+
 import '../../features/game/domain/models/game_state.dart';
 import '../../features/game/domain/models/tower.dart';
 import '../../features/game/domain/models/enemy.dart';
 import '../../features/game/domain/models/path.dart';
 import '../../features/game/domain/models/wave.dart';
 import '../../features/game/domain/models/tile_system.dart';
+import '../../features/game/domain/models/level.dart';
+import '../../features/game/domain/models/level_manager.dart';
 import '../../shared/models/vector2.dart';
 import '../../shared/models/entity.dart';
 
@@ -46,16 +52,11 @@ class _GameEngineState extends ConsumerState<GameEngine> {
     _waveManager = WaveManager();
     _tileSystem = TileSystem(gridWidth: 20, gridHeight: 15); // Initial size
 
-    // Initialize with dynamic path dimensions
-    _currentPath = _createPath();
+    // Initialize with level-aware path creation
+    _currentPath = _createLevelPath();
 
-    // Debug path creation
-    // print('GameEngine: Created path with ${_currentPath.waypoints.length} waypoints');
-    // print('GameEngine: First waypoint: ${_currentPath.waypoints.first.position}');
-    // print('GameEngine: Last waypoint: ${_currentPath.waypoints.last.position}');
-
-    // Generate waves for level 1
-    LevelWaves.generateWavesForLevel(_waveManager, 1);
+    // Generate waves based on current level
+    _generateLevelWaves();
 
     // Set up game loop callbacks
     _gameLoop.onUpdate = _updateGame;
@@ -63,8 +64,128 @@ class _GameEngineState extends ConsumerState<GameEngine> {
 
     _isInitialized = true;
 
+    // Start background music
+    AudioManager().playMusic(AudioEvent.gameplayMusic);
+
     // Start the game loop
     _gameLoop.start();
+  }
+
+  /// Create path based on current level selection
+  GamePath _createLevelPath() {
+    final levelManager = LevelManager.instance;
+    final screenSize = _lastScreenSize ?? const Size(800, 600);
+
+    // If level manager has a current level, use its path
+    if (levelManager.isInitialized && levelManager.currentLevel != null) {
+      final levelPath = levelManager.initializeLevelPath(
+        screenSize.width,
+        screenSize.height,
+      );
+      if (levelPath != null) {
+        return levelPath;
+      }
+    }
+
+    // Fallback to default path creation
+    return _createPath();
+  }
+
+  /// Generate waves based on current level
+  void _generateLevelWaves() {
+    final levelManager = LevelManager.instance;
+
+    // If level manager has a current level, use its wave generation
+    if (levelManager.isInitialized && levelManager.currentLevel != null) {
+      levelManager.generateLevelWaves(_waveManager);
+    } else {
+      // Fallback to level 1 waves
+      LevelWaves.generateWavesForLevel(_waveManager, 1);
+    }
+  }
+
+  /// Apply level-specific multipliers to enemy
+  void _applyLevelMultipliers(Enemy enemy) {
+    final levelManager = LevelManager.instance;
+
+    if (levelManager.isInitialized && levelManager.currentLevel != null) {
+      final multipliers = levelManager.getCurrentLevelMultipliers();
+
+      // Apply health multiplier
+      if (multipliers.health != 1.0) {
+        enemy.currentHealth = (enemy.maxHealth * multipliers.health);
+      }
+
+      // Apply speed multiplier
+      if (multipliers.speed != 1.0) {
+        enemy.currentSpeed = (enemy.baseSpeed * multipliers.speed);
+      }
+    }
+  }
+
+  // Helper methods for tower option styling to avoid dead code warnings
+  double _getHoverScale(bool isHovered, bool canAfford) {
+    if (isHovered && canAfford) return 1.05;
+    return 1.0;
+  }
+
+  Color _getBackgroundColor(Color color, bool canAfford, bool isHovered) {
+    if (!canAfford) return color.withValues(alpha: 0.4);
+    if (isHovered) return color.withValues(alpha: 0.9);
+    return color.withValues(alpha: 0.8);
+  }
+
+  Color _getBorderColor(bool canAfford, bool isHovered) {
+    if (!canAfford) return AppColors.textSecondary;
+    if (isHovered) return AppColors.textAccent;
+    return AppColors.hudBorder;
+  }
+
+  double _getBorderWidth(bool isHovered, bool canAfford) {
+    if (isHovered && canAfford) return 2;
+    return 1;
+  }
+
+  List<BoxShadow>? _getBoxShadow(bool canAfford, bool isHovered, Color color) {
+    if (canAfford && isHovered) {
+      return [
+        BoxShadow(
+          color: color.withValues(alpha: 0.5),
+          blurRadius: 8,
+          spreadRadius: 2,
+        ),
+      ];
+    }
+    return null;
+  }
+
+  double _getIconScale(bool isHovered, bool canAfford) {
+    if (isHovered && canAfford) return 1.1;
+    return 1.0;
+  }
+
+  Color _getIconColor(bool canAfford, bool isHovered) {
+    if (!canAfford) return AppColors.textSecondary;
+    if (isHovered) return AppColors.textAccent;
+    return AppColors.textOnPastel;
+  }
+
+  Color _getTextColor(bool canAfford, bool isHovered) {
+    if (!canAfford) return AppColors.textSecondary;
+    if (isHovered) return AppColors.textAccent;
+    return AppColors.textOnPastel;
+  }
+
+  Color _getDescriptionColor(bool canAfford, bool isHovered) {
+    if (!canAfford) return AppColors.textSecondary;
+    if (isHovered) return AppColors.textOnPastel;
+    return AppColors.textSecondary;
+  }
+
+  Color _getCostColor(bool canAfford, bool isHovered) {
+    if (!canAfford) return AppColors.textSecondary;
+    if (isHovered) return AppColors.textAccent;
+    return AppColors.textOnPastel;
   }
 
   /// Create path using actual screen dimensions with horizontal/vertical segments only
@@ -221,6 +342,9 @@ class _GameEngineState extends ConsumerState<GameEngine> {
       // Debug: print('Wave ${_waveManager.currentWaveNumber}: Spawning ${newEnemies.length} enemies');
     }
     for (final enemy in newEnemies) {
+      // Apply level-specific enemy multipliers
+      _applyLevelMultipliers(enemy);
+
       // Set up particle emitter callback for enemy death effects
       enemy.onParticleEmitterCreated = (emitter) {
         _entityManager.addParticleEmitter(emitter);
@@ -239,6 +363,10 @@ class _GameEngineState extends ConsumerState<GameEngine> {
     for (final tower in towers) {
       // Ensure tower has projectile callback set (safety check)
       tower.onProjectileCreated ??= (projectile) {
+        // Set up particle emitter callback for projectile effects
+        projectile.onParticleEmitterCreated = (emitter) {
+          _entityManager.addParticleEmitter(emitter);
+        };
         _entityManager.addEntity(projectile);
       };
 
@@ -306,6 +434,9 @@ class _GameEngineState extends ConsumerState<GameEngine> {
       // Check if all waves completed
       if (_waveManager.isAllWavesComplete) {
         gameStateNotifier.victory();
+
+        // Handle level completion
+        _handleLevelCompletion(gameState);
       } else {
         // Start preparation for next wave
         _waveManager.nextWave();
@@ -386,10 +517,116 @@ class _GameEngineState extends ConsumerState<GameEngine> {
     // Clear tower selection
     ref.read(towerSelectionProvider.notifier).clearSelection();
 
-    // Keep game loop running for menu state
-    if (!_gameLoop.isRunning) {
-      _gameLoop.start();
+    // Stop the game loop
+    _gameLoop.stop();
+
+    // Navigate back to main menu screen
+    if (mounted) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
+  }
+
+  /// Handle level completion and progression
+  void _handleLevelCompletion(GameState gameState) async {
+    final levelManager = LevelManager.instance;
+
+    if (!levelManager.isInitialized || levelManager.currentLevel == null) {
+      return;
+    }
+
+    final currentLevel = levelManager.currentLevel!;
+    final completionTime = gameState.gameDuration ?? Duration.zero;
+    final score = gameState.score;
+
+    // Determine if this was a perfect completion
+    // Perfect = no lives lost and high score
+    final isPerfect =
+        gameState.lives >= currentLevel.startingLives &&
+        score > (currentLevel.highScore ?? 0);
+
+    // Complete the level in the level manager
+    await levelManager.completeLevel(
+      currentLevel.id,
+      score: score,
+      completionTime: completionTime,
+      isPerfect: isPerfect,
+    );
+
+    // Show completion dialog with next level option
+    if (mounted) {
+      _showLevelCompletionDialog(
+        currentLevel,
+        score,
+        completionTime,
+        isPerfect,
+      );
+    }
+  }
+
+  /// Show level completion dialog
+  void _showLevelCompletionDialog(
+    GameLevel completedLevel,
+    int score,
+    Duration completionTime,
+    bool isPerfect,
+  ) {
+    final levelManager = LevelManager.instance;
+    final nextLevel = levelManager.getNextLevel();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text(isPerfect ? '🌟 Level Mastered!' : '✅ Level Complete!'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${completedLevel.name} completed!'),
+            const SizedBox(height: 8),
+            Text('Score: $score'),
+            Text('Time: ${_formatDuration(completionTime)}'),
+            if (isPerfect)
+              const Text(
+                'Perfect completion! 🎉',
+                style: TextStyle(
+                  color: Colors.amber,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            if (nextLevel != null && nextLevel.isUnlocked) ...[
+              const SizedBox(height: 16),
+              Text('Next: ${nextLevel.name}'),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _quitToMenu();
+            },
+            child: const Text('Main Menu'),
+          ),
+          if (nextLevel != null && nextLevel.isUnlocked)
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await levelManager.selectLevel(nextLevel.id);
+                _restartGame();
+              },
+              child: const Text('Next Level'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Format duration for display
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds.remainder(60);
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 
   /// Update path and tile system when screen size changes significantly
@@ -398,7 +635,7 @@ class _GameEngineState extends ConsumerState<GameEngine> {
         (screenSize.width - _lastScreenSize!.width).abs() > 50 ||
         (screenSize.height - _lastScreenSize!.height).abs() > 50) {
       _lastScreenSize = screenSize;
-      _currentPath = _createPath();
+      _currentPath = _createLevelPath();
 
       // Calculate UI heights for tile system
       final topHudHeight = screenSize.height < 600
@@ -449,7 +686,6 @@ class _GameEngineState extends ConsumerState<GameEngine> {
     }
 
     final gameState = ref.watch(gameStateProvider);
-    final towerSelection = ref.watch(towerSelectionProvider);
     _updatePathIfNeeded(screenSize);
 
     // Listen for tower selection changes and show upgrade dialog
@@ -578,7 +814,7 @@ class _GameEngineState extends ConsumerState<GameEngine> {
                                 playerName: 'Player',
                                 playerLevel: gameState.wave,
                                 currentHealth: gameState.lives,
-                                maxHealth: 20,
+                                maxHealth: _getMaxHealthForCurrentLevel(),
                                 gold: gameState.gold,
                                 score: gameState.score,
                                 enemiesInField: _entityManager
@@ -604,6 +840,44 @@ class _GameEngineState extends ConsumerState<GameEngine> {
                   ),
           ),
         ),
+
+        // Preparation message overlay - positioned at the top center
+        if (gameState.isPreparing) ...[
+          // Notification banner at top center
+          Positioned(
+            top: topHudHeight + 16, // Just below the top HUD
+            left: 16,
+            right: 16,
+            child: Container(
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.orange.withValues(alpha: 0.8),
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  'Preparing Wave ${gameState.wave}... ${gameState.remainingPreparationTime}s',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
 
         // Bottom UI Panel - Responsive design
         Positioned(
@@ -654,42 +928,6 @@ class _GameEngineState extends ConsumerState<GameEngine> {
                         // No inline panel needed
                       ],
                     ),
-
-                    // Preparation message overlay - positioned at bottom
-                    if (gameState.isPreparing)
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        child: Container(
-                          height: isSmallScreen ? 32 : 40,
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: Colors.orange.withValues(alpha: 0.8),
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.3),
-                                blurRadius: 4,
-                                offset: const Offset(0, -2),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Text(
-                              'Preparing... ${gameState.remainingPreparationTime}s',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: isSmallScreen ? 12 : 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -714,15 +952,66 @@ class _GameEngineState extends ConsumerState<GameEngine> {
         return Container(
           padding: EdgeInsets.all(isVerySmall ? 4 : (isSmall ? 6 : 8)),
           decoration: BoxDecoration(
-            color: const Color(0xFFF0E6FF).withAlpha(200),
+            color: AppColors.cardBackground,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFD4C5E8), width: 1),
+            border: Border.all(color: AppColors.cardBorder, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (!isVerySmall) ...[SizedBox(height: isSmall ? 2 : 4)],
+              // Tower Shop Header - Only show if not very small
+              if (!isVerySmall) ...[
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmall ? 8 : 12,
+                    vertical: isSmall ? 4 : 6,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.pastelLavender.withValues(alpha: 0.8),
+                        AppColors.pastelSky.withValues(alpha: 0.8),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: AppColors.hudBorder.withValues(alpha: 0.6),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.store,
+                        size: isSmall ? 14 : 16,
+                        color: AppColors.textOnPastel,
+                      ),
+                      SizedBox(width: isSmall ? 4 : 6),
+                      Text(
+                        'Tower Shop',
+                        style: TextStyle(
+                          color: AppColors.textOnPastel,
+                          fontSize: isSmall ? 12 : 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: isSmall ? 4 : 6),
+              ],
 
               // Tower options - Full width with even spacing
               Row(
@@ -795,44 +1084,85 @@ class _GameEngineState extends ConsumerState<GameEngine> {
     required bool isSmall,
     required TowerType towerType,
   }) {
-    final towerWidget = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          size: isSmall ? 24 : 32,
-          color: canAfford ? color : Colors.grey,
-        ),
-        if (title.isNotEmpty) ...[
-          SizedBox(height: isSmall ? 2 : 4),
-          Text(
-            title,
-            style: TextStyle(
-              color: canAfford ? const Color(0xFF4A4A4A) : Colors.grey,
-              fontSize: isSmall ? 10 : 12,
-              fontWeight: FontWeight.bold,
+    final towerWidget = StatefulBuilder(
+      builder: (context, setState) {
+        bool isHovered = false;
+
+        return MouseRegion(
+          onEnter: (_) => setState(() => isHovered = true),
+          onExit: (_) => setState(() => isHovered = false),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            transform: Matrix4.identity()
+              ..scale(_getHoverScale(isHovered, canAfford)),
+            padding: EdgeInsets.all(isSmall ? 4 : 8),
+            decoration: BoxDecoration(
+              color: _getBackgroundColor(color, canAfford, isHovered),
+              borderRadius: BorderRadius.circular(isSmall ? 6 : 8),
+              border: Border.all(
+                color: _getBorderColor(canAfford, isHovered),
+                width: _getBorderWidth(isHovered, canAfford),
+              ),
+              boxShadow: _getBoxShadow(canAfford, isHovered, color),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 200),
+                  tween: Tween(
+                    begin: 1.0,
+                    end: _getIconScale(isHovered, canAfford),
+                  ),
+                  builder: (context, scale, child) {
+                    return Transform.scale(
+                      scale: scale,
+                      child: Icon(
+                        icon,
+                        size: isSmall ? 24 : 32,
+                        color: _getIconColor(canAfford, isHovered),
+                      ),
+                    );
+                  },
+                ),
+                if (title.isNotEmpty) ...[
+                  SizedBox(height: isSmall ? 2 : 4),
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 200),
+                    style: TextStyle(
+                      color: _getTextColor(canAfford, isHovered),
+                      fontSize: isSmall ? 10 : 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    child: Text(title),
+                  ),
+                ],
+                if (description.isNotEmpty) ...[
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 200),
+                    style: TextStyle(
+                      color: _getDescriptionColor(canAfford, isHovered),
+                      fontSize: isSmall ? 8 : 10,
+                    ),
+                    child: Text(description),
+                  ),
+                ],
+                // Show cost
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: TextStyle(
+                    color: _getCostColor(canAfford, isHovered),
+                    fontSize: isSmall ? 8 : 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  child: Text('$cost G'),
+                ),
+              ],
             ),
           ),
-        ],
-        if (description.isNotEmpty) ...[
-          Text(
-            description,
-            style: TextStyle(
-              color: canAfford ? const Color(0xFF8B8B8B) : Colors.grey,
-              fontSize: isSmall ? 8 : 10,
-            ),
-          ),
-        ],
-        // Show cost
-        Text(
-          '$cost G',
-          style: TextStyle(
-            color: canAfford ? const Color(0xFF4A4A4A) : Colors.grey,
-            fontSize: isSmall ? 8 : 10,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
+        );
+      },
     );
 
     if (!canAfford) {
@@ -843,26 +1173,43 @@ class _GameEngineState extends ConsumerState<GameEngine> {
       data: towerType,
       feedback: Material(
         color: Colors.transparent,
-        child: Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.8),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 8,
-                spreadRadius: 2,
+        child: TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 200),
+          tween: Tween(begin: 1.0, end: 1.2),
+          builder: (context, scale, child) {
+            return Transform.scale(
+              scale: scale,
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.9),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      blurRadius: 12,
+                      spreadRadius: 3,
+                    ),
+                  ],
+                ),
+                child: Icon(icon, size: 32, color: AppColors.textLight),
               ),
-            ],
-          ),
-          child: Icon(icon, size: 32, color: Colors.white),
+            );
+          },
         ),
       ),
       dragAnchorStrategy: pointerDragAnchorStrategy,
-      childWhenDragging: Opacity(opacity: 0.5, child: towerWidget),
-      child: towerWidget,
+      childWhenDragging: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        transform: Matrix4.identity()..scale(0.9),
+        child: Opacity(opacity: 0.3, child: towerWidget),
+      ),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        child: towerWidget,
+      ),
     );
   }
 
@@ -977,7 +1324,7 @@ class _GameEngineState extends ConsumerState<GameEngine> {
       child: Icon(
         icon,
         size: 16,
-        color: canAfford ? Colors.white : Colors.grey,
+        color: canAfford ? AppColors.textOnPastel : AppColors.textSecondary,
       ),
     );
 
@@ -1020,8 +1367,10 @@ class _GameEngineState extends ConsumerState<GameEngine> {
         GestureDetector(
           onTap: () {
             if (gameState.isPaused) {
+              AudioManager().resumeMusic();
               ref.read(gameStateProvider.notifier).resumeGame();
             } else {
+              AudioManager().pauseMusic();
               ref.read(gameStateProvider.notifier).pauseGame();
             }
           },
@@ -1057,6 +1406,33 @@ class _GameEngineState extends ConsumerState<GameEngine> {
                     ),
                   ),
               ],
+            ),
+          ),
+        ),
+        SizedBox(width: isCompact ? 4 : 8),
+        // Audio settings button
+        GestureDetector(
+          onTap: () {
+            AudioManager().playSfx(AudioEvent.buttonClick);
+            AudioSettingsPanel.show(context);
+          },
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isCompact ? 8 : 12,
+              vertical: isCompact ? 4 : 6,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.3),
+                width: 1,
+              ),
+            ),
+            child: Icon(
+              Icons.volume_up,
+              color: Colors.white,
+              size: isCompact ? 14 : 16,
             ),
           ),
         ),
@@ -1163,5 +1539,18 @@ class _GameEngineState extends ConsumerState<GameEngine> {
   Widget _buildPreparationCountdown(GameState gameState, Size screenSize) {
     // No overlay during preparation - the countdown is already shown in the bottom UI
     return Container();
+  }
+
+  /// Get the maximum health for the current level
+  int _getMaxHealthForCurrentLevel() {
+    try {
+      final levelManager = LevelManager.instance;
+      if (levelManager.isInitialized && levelManager.currentLevel != null) {
+        return levelManager.currentLevel!.startingLives;
+      }
+    } catch (e) {
+      // Fallback to default if level manager not available
+    }
+    return 20; // Default fallback
   }
 }

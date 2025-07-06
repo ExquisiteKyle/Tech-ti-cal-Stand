@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
+import '../audio/audio_manager.dart';
 import '../../features/game/domain/models/tower.dart';
 import '../../features/game/presentation/providers/game_state_provider.dart';
 import '../../features/game/presentation/providers/tower_selection_provider.dart';
@@ -418,7 +419,9 @@ class _TowerUpgradeDialogState extends ConsumerState<TowerUpgradeDialog>
     bool canAfford,
     UpgradePath path,
     Color pathColor,
-  ) => Container(
+  ) => AnimatedContainer(
+    duration: const Duration(milliseconds: 200),
+    curve: Curves.easeInOut,
     decoration: BoxDecoration(
       color: canAfford
           ? AppColors.buttonSuccess.withValues(alpha: 0.2)
@@ -430,25 +433,48 @@ class _TowerUpgradeDialogState extends ConsumerState<TowerUpgradeDialog>
             : AppColors.buttonWarning.withValues(alpha: 0.4),
         width: 2,
       ),
+      boxShadow: [
+        BoxShadow(
+          color: pathColor.withValues(alpha: 0.2),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
     ),
     child: Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: canAfford ? () => _upgradeTower(path) : null,
-        child: Padding(
+        onTap: canAfford ? () => _upgradeTowerWithAnimation(path) : null,
+        splashColor: pathColor.withValues(alpha: 0.3),
+        highlightColor: pathColor.withValues(alpha: 0.1),
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(Icons.arrow_upward, size: 18, color: pathColor),
+                  TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 300),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: 0.8 + (0.2 * value),
+                        child: Icon(
+                          Icons.arrow_upward,
+                          size: 18,
+                          color: pathColor,
+                        ),
+                      );
+                    },
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     pathName,
-                    style: TextStyle(
-                      color: const Color(0xFF2D2A26),
+                    style: const TextStyle(
+                      color: Color(0xFF2D2A26),
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
@@ -456,32 +482,43 @@ class _TowerUpgradeDialogState extends ConsumerState<TowerUpgradeDialog>
                   const Spacer(),
                   Row(
                     children: [
-                      Icon(
-                        Icons.monetization_on,
-                        size: 16,
-                        color: canAfford ? Colors.green : Colors.red,
+                      TweenAnimationBuilder<double>(
+                        duration: const Duration(milliseconds: 400),
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        builder: (context, value, child) {
+                          return Transform.scale(
+                            scale: 0.8 + (0.2 * value),
+                            child: Icon(
+                              Icons.monetization_on,
+                              size: 16,
+                              color: canAfford ? Colors.green : Colors.red,
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        cost.toString(),
+                      AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 200),
                         style: TextStyle(
                           color: canAfford ? Colors.green : Colors.red,
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),
+                        child: Text(cost.toString()),
                       ),
                     ],
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-              Text(
-                description,
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 300),
                 style: const TextStyle(
                   color: Color(0xFF4A4A4A),
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
                 ),
+                child: Text(description),
               ),
             ],
           ),
@@ -490,20 +527,28 @@ class _TowerUpgradeDialogState extends ConsumerState<TowerUpgradeDialog>
     ),
   );
 
-  void _upgradeTower(UpgradePath path) {
+  void _upgradeTowerWithAnimation(UpgradePath path) {
     final gameStateNotifier = ref.read(gameStateProvider.notifier);
     final upgradeCost = widget.tower.getUpgradeCost();
 
     // Check if player can afford the upgrade
     if (gameStateNotifier.spendGold(upgradeCost)) {
+      // Play upgrade sound
+      AudioManager().playSfx(AudioEvent.towerUpgrade);
+
       // Perform the upgrade
       widget.tower.upgrade(path);
 
-      // Close the dialog
-      Navigator.of(context).pop();
+      // Add a small scale animation before closing
+      _animationController.reverse().then((_) {
+        if (mounted) {
+          // Close the dialog
+          Navigator.of(context).pop();
 
-      // Clear tower selection
-      ref.read(towerSelectionProvider.notifier).clearSelection();
+          // Clear tower selection
+          ref.read(towerSelectionProvider.notifier).clearSelection();
+        }
+      });
     }
   }
 

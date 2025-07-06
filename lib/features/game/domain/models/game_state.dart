@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'tile_system.dart';
+import 'level_manager.dart';
 
 /// Enumeration of possible game states
 enum GameStatus { menu, preparing, playing, paused, gameOver, victory, loading }
@@ -35,16 +36,39 @@ class GameState extends Equatable {
   });
 
   /// Create initial game state
-  factory GameState.initial() => GameState(
-    status: GameStatus.menu,
-    gold: 300, // Increased starting gold for better early game
-    lives: 20,
-    wave: 1,
-    score: 0,
-    gameSpeed: 1.0,
-    isPaused: false,
-    gameStartTime: DateTime.now(),
-  );
+  factory GameState.initial() {
+    // Try to get resources from current level
+    try {
+      final levelManager = LevelManager.instance;
+      if (levelManager.isInitialized && levelManager.currentLevel != null) {
+        final resources = levelManager.getCurrentLevelResources();
+        return GameState(
+          status: GameStatus.menu,
+          gold: resources.gold,
+          lives: resources.lives,
+          wave: 1,
+          score: 0,
+          gameSpeed: 1.0,
+          isPaused: false,
+          gameStartTime: DateTime.now(),
+        );
+      }
+    } catch (e) {
+      // Fallback to default if level manager not available
+    }
+
+    // Default values if level manager not available
+    return GameState(
+      status: GameStatus.menu,
+      gold: 300, // Default starting gold
+      lives: 20, // Default starting lives
+      wave: 1,
+      score: 0,
+      gameSpeed: 1.0,
+      isPaused: false,
+      gameStartTime: DateTime.now(),
+    );
+  }
 
   /// Start preparation phase (countdown before wave begins)
   GameState startPreparation() => copyWith(

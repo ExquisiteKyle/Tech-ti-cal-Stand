@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../game/entity_manager.dart';
+import '../audio/audio_manager.dart';
 import '../../features/game/domain/models/tower.dart';
 import '../../features/game/domain/models/path.dart';
 import '../../features/game/domain/models/wave.dart';
@@ -37,10 +38,7 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
   late GamePath _currentPath;
   Vector2? _towerPreviewPosition;
   DateTime? _lastTowerClickTime;
-  Tower? _clickedTower;
-  DateTime? _clickFeedbackTime;
   static const Duration _clickThrottleDuration = Duration(milliseconds: 300);
-  static const Duration _clickFeedbackDuration = Duration(milliseconds: 200);
 
   @override
   void initState() {
@@ -227,11 +225,7 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
             now.difference(_lastTowerClickTime!) > _clickThrottleDuration) {
           _lastTowerClickTime = now;
 
-          // Show visual feedback
-          setState(() {
-            _clickedTower = clickedTower;
-            _clickFeedbackTime = now;
-          });
+          // Visual feedback handled by tower selection state
 
           // Select tower for upgrade
           towerSelectionNotifier.selectExistingTower(clickedTower);
@@ -369,6 +363,9 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
     widget.entityManager.addEntity(tower);
     // Debug: Tower added to entity manager. Total entities: ${widget.entityManager.entities.length}
 
+    // Play tower placement sound
+    AudioManager().playSfx(AudioEvent.towerPlace);
+
     // Update tile system to mark tile as occupied
     try {
       tileSystem.placeTower(tile.gridX, tile.gridY, tower.id);
@@ -427,14 +424,6 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
       }
     }
     return null;
-  }
-
-  /// Check if we should show click feedback
-  bool _shouldShowClickFeedback() {
-    if (_clickFeedbackTime == null || _clickedTower == null) return false;
-
-    final now = DateTime.now();
-    return now.difference(_clickFeedbackTime!) < _clickFeedbackDuration;
   }
 
   @override
@@ -669,6 +658,11 @@ class GameCanvasPainter extends CustomPainter {
             .black // Black for invalid edge tiles
         ..style = PaintingStyle.fill;
 
+      final preparationBlockedPaint = Paint()
+        ..color = Colors
+            .black // Solid black for preparation blocked tiles
+        ..style = PaintingStyle.fill;
+
       final tileBorderPaint = Paint()
         ..color = const Color(0xFFCCCCCC).withAlpha(150)
         ..style = PaintingStyle.stroke
@@ -701,11 +695,39 @@ class GameCanvasPainter extends CustomPainter {
             case TileState.invalid:
               fillPaint = invalidTilePaint;
               break;
+            case TileState.preparationBlocked:
+              fillPaint = preparationBlockedPaint;
+              break;
           }
 
           // Draw tile
           canvas.drawRect(rect, fillPaint);
-          canvas.drawRect(rect, tileBorderPaint);
+
+          // Only draw borders for non-preparation-blocked tiles
+          if (tile.state != TileState.preparationBlocked) {
+            canvas.drawRect(rect, tileBorderPaint);
+          } else {
+            // Draw red X on blacked out tiles to show they're invalid
+            final redPaint = Paint()
+              ..color = Colors.red
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2;
+
+            final center = Offset(tile.worldPosition.x, tile.worldPosition.y);
+            final size = TileSystem.tileSize * 0.4;
+
+            // Draw X
+            canvas.drawLine(
+              Offset(center.dx - size / 2, center.dy - size / 2),
+              Offset(center.dx + size / 2, center.dy + size / 2),
+              redPaint,
+            );
+            canvas.drawLine(
+              Offset(center.dx + size / 2, center.dy - size / 2),
+              Offset(center.dx - size / 2, center.dy + size / 2),
+              redPaint,
+            );
+          }
         }
       }
     } catch (e) {

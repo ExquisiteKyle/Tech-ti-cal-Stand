@@ -10,24 +10,69 @@ class AppColors {
   static const Color pastelRose = Color(0xFFFFB6C1);
   static const Color pastelLemon = Color(0xFFFFFACD);
 
+  // Alias colors for compatibility
+  static const Color primary = pastelLavender;
+  static const Color secondary = pastelSky;
+  static const Color backgroundLight = backgroundSoft;
+
   // Background colors
   static const Color backgroundSoft = Color(0xFFFAF9F6);
   static const Color backgroundCard = Color(0xFFF5F3F0);
   static const Color backgroundOverlay = Color(0xFF2D2A26);
 
-  // Text colors
-  static const Color textPrimary = Color(0xFF4A4A4A);
-  static const Color textSecondary = Color(0xFF8B8B8B);
-  static const Color textLight = Color(0xFFFFFFFF);
-  static const Color textDark = Color(0xFF2D2A26);
+  // Text colors - Enhanced for better contrast while maintaining pastel theme
+  static const Color textPrimary = Color(
+    0xFF2D2A26,
+  ); // Dark brown - excellent contrast
+  static const Color textSecondary = Color(
+    0xFF5A5A5A,
+  ); // Medium gray - good contrast
+  static const Color textLight = Color(
+    0xFFFFFFFF,
+  ); // Pure white - for dark backgrounds
+  static const Color textDark = Color(
+    0xFF1A1A1A,
+  ); // Very dark - maximum contrast
+  static const Color textOnPastel = Color(
+    0xFF2D2A26,
+  ); // Dark brown - perfect for pastel backgrounds
+  static const Color textAccent = Color(
+    0xFF6B4E7D,
+  ); // Deep purple - complements pastels
+  static const Color textSuccess = Color(
+    0xFF2E7D32,
+  ); // Dark green - for success states
+  static const Color textWarning = Color(
+    0xFFE65100,
+  ); // Dark orange - for warnings
+  static const Color textError = Color(0xFFD32F2F); // Dark red - for errors
 
-  // Game UI colors
-  static const Color hudBackground = Color(0xFFF0E6FF);
-  static const Color hudBorder = Color(0xFFD4C5E8);
-  static const Color buttonPrimary = Color(0xFFE6B3FF);
-  static const Color buttonSecondary = Color(0xFFB3E6FF);
-  static const Color buttonSuccess = Color(0xFFB3FFB3);
-  static const Color buttonWarning = Color(0xFFFFE6B3);
+  // Game UI colors - Enhanced for better contrast
+  static const Color hudBackground = Color(
+    0xFFF8F5FF,
+  ); // Lighter pastel for better contrast
+  static const Color hudBorder = Color(
+    0xFFB8A9D9,
+  ); // Deeper border for definition
+  static const Color buttonPrimary = Color(
+    0xFFD1B3E6,
+  ); // Slightly deeper pastel
+  static const Color buttonSecondary = Color(
+    0xFF9FDDE6,
+  ); // Slightly deeper pastel
+  static const Color buttonSuccess = Color(
+    0xFF9FE6B3,
+  ); // Slightly deeper pastel
+  static const Color buttonWarning = Color(
+    0xFFE6D19F,
+  ); // Slightly deeper pastel
+  static const Color buttonDisabled = Color(
+    0xFFE8E8E8,
+  ); // Light gray for disabled state
+  static const Color cardBackground = Color(
+    0xFFFCFAFF,
+  ); // Very light background for cards
+  static const Color cardBorder = Color(0xFFE0D4F7); // Soft border for cards
 
   // Game element colors
   static const Color gridLine = Color(0xFFE6E6E6);

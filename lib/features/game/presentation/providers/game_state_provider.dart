@@ -1,17 +1,20 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/audio/audio_manager.dart';
 import '../../domain/models/game_state.dart';
+import 'achievement_provider.dart';
 
 /// Provider for managing game state
 final gameStateProvider = StateNotifierProvider<GameStateNotifier, GameState>(
-  (ref) => GameStateNotifier(),
+  (ref) => GameStateNotifier(ref),
 );
 
 /// Notifier for game state changes
 class GameStateNotifier extends StateNotifier<GameState> {
   Timer? _preparationTimer;
+  final Ref _ref;
 
-  GameStateNotifier() : super(GameState.initial());
+  GameStateNotifier(this._ref) : super(GameState.initial());
 
   /// Start preparation phase (countdown before actual game)
   void startPreparation() {
@@ -61,12 +64,17 @@ class GameStateNotifier extends StateNotifier<GameState> {
 
   /// End the game with game over
   void gameOver() {
+    AudioManager().playSfx(AudioEvent.gameOver);
     state = state.gameOver();
   }
 
   /// End the game with victory
   void victory() {
+    AudioManager().playSfx(AudioEvent.victory);
     state = state.victory();
+
+    // Track victory achievements
+    _trackVictoryAchievements();
   }
 
   /// Reset to initial state
@@ -101,6 +109,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
 
   /// Progress to the next wave
   void nextWave() {
+    AudioManager().playSfx(AudioEvent.waveStart);
     state = state.nextWave();
   }
 
@@ -137,6 +146,31 @@ class GameStateNotifier extends StateNotifier<GameState> {
       return DateTime.now().difference(state.gameStartTime!);
     }
     return null;
+  }
+
+  /// Track victory achievements
+  void _trackVictoryAchievements() {
+    final achievementNotifier = _ref.read(achievementNotifierProvider.notifier);
+    final duration = gameDuration;
+
+    // Check progression achievements
+    achievementNotifier.checkProgressionAchievements(
+      wavesCompleted: 1,
+      levelsCompleted: 1,
+      goldEarned: state.gold,
+      isFirstVictory: state.wave == 1,
+    );
+
+    // Check strategic achievements
+    achievementNotifier.checkStrategicAchievements(
+      perfectWave: state.lives == 20, // Full health
+      goldRemaining: state.gold,
+      levelTime: duration,
+      accuracy: 1.0, // TODO: Track actual accuracy
+    );
+
+    // Check time-based achievements
+    achievementNotifier.checkTimeAchievements();
   }
 }
 

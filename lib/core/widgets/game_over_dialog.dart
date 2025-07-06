@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../audio/audio_manager.dart';
 
 /// Game Over dialog that shows when player health reaches 0
 class GameOverDialog extends StatefulWidget {
@@ -226,7 +227,10 @@ class _GameOverDialogState extends State<GameOverDialog>
                         width: double.infinity,
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: widget.onRestart,
+                          onPressed: () {
+                            AudioManager().playSfx(AudioEvent.buttonClick);
+                            widget.onRestart();
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(
                               0xFF98E4D6,
@@ -267,7 +271,10 @@ class _GameOverDialogState extends State<GameOverDialog>
                         width: double.infinity,
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: widget.onQuit,
+                          onPressed: () {
+                            AudioManager().playSfx(AudioEvent.buttonClick);
+                            widget.onQuit();
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(
                               0xFFE6B3FF,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../../../../shared/models/entity.dart';
 import '../../../../shared/models/vector2.dart';
+import '../../../../core/audio/audio_manager.dart';
 import 'particle.dart';
 
 /// Enumeration of enemy types
@@ -113,9 +114,20 @@ abstract class Enemy extends Entity {
     currentHealth -= finalDamage;
     // print('$name health: $currentHealth/$maxHealth');
 
+    // Play hit sound (but not death sound yet)
+    if (currentHealth > 0) {
+      AudioManager().playSfx(AudioEvent.enemyHit, volume: 0.7);
+    }
+
     if (currentHealth <= 0) {
       currentHealth = 0;
       // Debug: print('$name has been eliminated! Creating death effects');
+
+      // Play death sound
+      final deathSound = getDeathSound();
+      if (deathSound != null) {
+        AudioManager().playSfx(deathSound);
+      }
 
       // Create death particle effects
       final deathEffects = createDeathEffects();
@@ -131,6 +143,9 @@ abstract class Enemy extends Entity {
 
   /// Create death particle effects (override in subclasses)
   List<ParticleEmitter> createDeathEffects();
+
+  /// Get the death sound for this enemy type (override in subclasses)
+  AudioEvent? getDeathSound() => AudioEvent.enemyDeath;
 
   /// Apply status effect to enemy
   void applyStatusEffect(StatusEffect effect) {
@@ -667,4 +682,7 @@ class Boss extends Enemy {
       ),
     ];
   }
+
+  @override
+  AudioEvent? getDeathSound() => AudioEvent.bossSpawn; // Reuse boss spawn for dramatic effect
 }

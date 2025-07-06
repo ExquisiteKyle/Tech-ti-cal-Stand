@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import '../../../../shared/models/entity.dart';
 import '../../../../shared/models/vector2.dart';
+import '../../../../core/audio/audio_manager.dart';
 import 'enemy.dart';
 import 'projectile.dart';
 import 'particle.dart';
@@ -87,6 +89,19 @@ abstract class Tower extends Entity {
   void attack(Entity target, double currentTime) {
     if (canAttack(currentTime)) {
       // Debug: print('${name} attacking target at ${target.center}');
+
+      // Play tower attack sound
+      final attackSound = getAttackSound();
+      if (attackSound != null) {
+        AudioManager().playSfx(attackSound);
+      }
+
+      // Create muzzle flash effect
+      final muzzleFlash = createMuzzleFlash();
+      if (muzzleFlash != null) {
+        onParticleEmitterCreated?.call(muzzleFlash);
+      }
+
       final projectile = createProjectile(target);
       if (projectile != null) {
         // Debug: print('Created projectile: ${projectile.type} with damage ${projectile.damage}');
@@ -97,6 +112,29 @@ abstract class Tower extends Entity {
       }
       lastAttackTime = currentTime;
     }
+  }
+
+  /// Get the attack sound for this tower type (override in subclasses)
+  AudioEvent? getAttackSound() => null;
+
+  /// Create muzzle flash effect when tower fires (override in subclasses)
+  ParticleEmitter? createMuzzleFlash() {
+    // Default muzzle flash - can be overridden by specific tower types
+    return ParticleEmitter(
+      position: Vector2(center.x, center.y),
+      type: ParticleType.sparkle,
+      particleCount: 3,
+      emissionRate: 0.01,
+      spreadAngle: math.pi * 0.5,
+      minSpeed: 30.0,
+      maxSpeed: 80.0,
+      minLifetime: 0.1,
+      maxLifetime: 0.3,
+      colors: [Colors.yellow, Colors.orange, Colors.white],
+      minSize: 2.0,
+      maxSize: 5.0,
+      gravity: 0.0,
+    );
   }
 
   /// Create a projectile for this tower type (override in subclasses)
@@ -316,6 +354,29 @@ class ArcherTower extends Tower {
     'Path 1: Multi-shot (${upgradeLevel + 1} arrows)',
     'Path 2: Poison arrows (damage over time)',
   ];
+
+  @override
+  ParticleEmitter? createMuzzleFlash() {
+    // Archer muzzle flash - quick sparkles
+    return ParticleEmitter(
+      position: Vector2(center.x, center.y),
+      type: ParticleType.sparkle,
+      particleCount: 4,
+      emissionRate: 0.01,
+      spreadAngle: math.pi * 0.3,
+      minSpeed: 40.0,
+      maxSpeed: 100.0,
+      minLifetime: 0.1,
+      maxLifetime: 0.2,
+      colors: [Colors.yellow, Colors.orange, Colors.brown],
+      minSize: 1.5,
+      maxSize: 3.0,
+      gravity: 0.0,
+    );
+  }
+
+  @override
+  AudioEvent? getAttackSound() => AudioEvent.archerFire;
 }
 
 /// Cannon Tower - High damage, splash damage
@@ -357,6 +418,29 @@ class CannonTower extends Tower {
     'Path 1: Explosive rounds (${25 + upgradeLevel * 25}% splash)',
     'Path 2: Area damage (increased splash radius)',
   ];
+
+  @override
+  ParticleEmitter? createMuzzleFlash() {
+    // Cannon muzzle flash - smoke and fire
+    return ParticleEmitter(
+      position: Vector2(center.x, center.y),
+      type: ParticleType.explosion,
+      particleCount: 8,
+      emissionRate: 0.01,
+      spreadAngle: math.pi * 0.4,
+      minSpeed: 60.0,
+      maxSpeed: 120.0,
+      minLifetime: 0.2,
+      maxLifetime: 0.4,
+      colors: [Colors.orange, Colors.red, Colors.yellow, Colors.grey],
+      minSize: 3.0,
+      maxSize: 6.0,
+      gravity: 20.0,
+    );
+  }
+
+  @override
+  AudioEvent? getAttackSound() => AudioEvent.cannonFire;
 }
 
 /// Magic Tower - Slows enemies, magical damage
@@ -406,6 +490,29 @@ class MagicTower extends Tower {
     'Path 1: Chain lightning (hits ${upgradeLevel + 2} enemies)',
     'Path 2: Freeze effect (${20 + upgradeLevel * 20}% slow)',
   ];
+
+  @override
+  ParticleEmitter? createMuzzleFlash() {
+    // Magic muzzle flash - magical sparkles
+    return ParticleEmitter(
+      position: Vector2(center.x, center.y),
+      type: ParticleType.magic,
+      particleCount: 6,
+      emissionRate: 0.01,
+      spreadAngle: math.pi * 0.6,
+      minSpeed: 50.0,
+      maxSpeed: 100.0,
+      minLifetime: 0.15,
+      maxLifetime: 0.35,
+      colors: [Colors.purple, Colors.pink, Colors.blue, Colors.white],
+      minSize: 2.0,
+      maxSize: 5.0,
+      gravity: -15.0, // Float upward
+    );
+  }
+
+  @override
+  AudioEvent? getAttackSound() => AudioEvent.magicFire;
 }
 
 /// Sniper Tower - Very high damage, long range
@@ -460,4 +567,27 @@ class SniperTower extends Tower {
     'Path 1: Critical hits (${15 + upgradeLevel * 15}% chance)',
     'Path 2: Armor piercing (ignores ${25 + upgradeLevel * 25}% armor)',
   ];
+
+  @override
+  ParticleEmitter? createMuzzleFlash() {
+    // Sniper muzzle flash - precise flash with smoke
+    return ParticleEmitter(
+      position: Vector2(center.x, center.y),
+      type: ParticleType.sparkle,
+      particleCount: 2,
+      emissionRate: 0.01,
+      spreadAngle: math.pi * 0.1, // Very focused
+      minSpeed: 80.0,
+      maxSpeed: 150.0,
+      minLifetime: 0.08,
+      maxLifetime: 0.15,
+      colors: [Colors.white, Colors.yellow, Colors.lightGreen],
+      minSize: 1.0,
+      maxSize: 2.5,
+      gravity: 0.0,
+    );
+  }
+
+  @override
+  AudioEvent? getAttackSound() => AudioEvent.sniperFire;
 }

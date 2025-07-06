@@ -2,9 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_colors.dart';
-import 'core/game/game_engine.dart';
+import 'core/audio/audio_manager.dart';
+import 'features/game/domain/models/achievement_manager.dart';
+import 'features/game/presentation/screens/main_menu_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize audio manager
+  await AudioManager().initialize();
+
+  // Initialize achievement manager
+  await AchievementManager.instance.initialize();
+
   runApp(const ProviderScope(child: TechticalStandApp()));
 }
 
@@ -39,6 +49,6 @@ class TechticalStandApp extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     ),
-    home: const GameEngine(),
+    home: const MainMenuScreen(),
   );
 }

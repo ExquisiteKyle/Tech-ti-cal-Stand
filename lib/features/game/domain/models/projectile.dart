@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../../../../shared/models/entity.dart';
 import '../../../../shared/models/vector2.dart';
+import '../../../../core/audio/audio_manager.dart';
 import 'enemy.dart';
+import 'particle.dart';
 
 /// Enumeration of projectile types
 enum ProjectileType { arrow, cannonball, magicBolt, sniperBullet }
@@ -19,6 +21,10 @@ abstract class Projectile extends Entity {
   double lifetime;
   Vector2 direction;
   bool hasHitTarget;
+  double lastTrailTime;
+
+  /// Callback for when a particle emitter is created
+  void Function(ParticleEmitter)? onParticleEmitterCreated;
 
   Projectile({
     required this.type,
@@ -31,7 +37,8 @@ abstract class Projectile extends Entity {
     required super.size,
   }) : lifetime = 0.0,
        direction = Vector2.zero(),
-       hasHitTarget = false {
+       hasHitTarget = false,
+       lastTrailTime = 0.0 {
     // Calculate initial direction to target
     _calculateDirection();
     // Debug: print('Projectile created at $position targeting ${target.center}');
@@ -67,10 +74,66 @@ abstract class Projectile extends Entity {
     if (!hasHitTarget && target.isActive) {
       // Debug: print('Projectile $type hitting target ${target.runtimeType}!');
       hasHitTarget = true;
+
+      // Play impact sound
+      final impactSound = getImpactSound();
+      if (impactSound != null) {
+        AudioManager().playSfx(impactSound);
+      }
+
+      // Create impact effect
+      final impactEffect = createImpactEffect();
+      if (impactEffect != null) {
+        onParticleEmitterCreated?.call(impactEffect);
+      }
+
       applyDamage();
       onHit();
       onDestroy();
     }
+  }
+
+  /// Get the impact sound for this projectile type (override in subclasses)
+  AudioEvent? getImpactSound() => null;
+
+  /// Create impact effect when projectile hits target (override in subclasses)
+  ParticleEmitter? createImpactEffect() {
+    // Default impact effect
+    return ParticleEmitter(
+      position: Vector2(center.x, center.y),
+      type: ParticleType.sparkle,
+      particleCount: 5,
+      emissionRate: 0.01,
+      spreadAngle: math.pi * 2,
+      minSpeed: 40.0,
+      maxSpeed: 100.0,
+      minLifetime: 0.2,
+      maxLifetime: 0.5,
+      colors: [Colors.yellow, Colors.orange, Colors.white],
+      minSize: 2.0,
+      maxSize: 4.0,
+      gravity: 20.0,
+    );
+  }
+
+  /// Create projectile trail effect (override in subclasses)
+  ParticleEmitter? createTrailEffect() {
+    // Default trail effect
+    return ParticleEmitter(
+      position: Vector2(center.x, center.y),
+      type: ParticleType.trail,
+      particleCount: 2,
+      emissionRate: 0.02,
+      spreadAngle: math.pi * 0.2,
+      minSpeed: 10.0,
+      maxSpeed: 30.0,
+      minLifetime: 0.3,
+      maxLifetime: 0.6,
+      colors: [color.withAlpha(150), color.withAlpha(100)],
+      minSize: 1.0,
+      maxSize: 3.0,
+      gravity: 0.0,
+    );
   }
 
   /// Apply damage to the target (override for different damage types)
@@ -120,6 +183,17 @@ abstract class Projectile extends Entity {
       position.x + direction.x * moveDistance,
       position.y + direction.y * moveDistance,
     );
+
+    // Create trail effect periodically
+    lastTrailTime += deltaTime;
+    if (lastTrailTime >= 0.05) {
+      // Create trail every 0.05 seconds
+      final trailEffect = createTrailEffect();
+      if (trailEffect != null) {
+        onParticleEmitterCreated?.call(trailEffect);
+      }
+      lastTrailTime = 0.0;
+    }
 
     // final distanceToTarget = distanceTo(target);
 
@@ -282,6 +356,49 @@ class Arrow extends Projectile {
       // Debug: print('Enemy health after Arrow hit: ${enemy.currentHealth}');
     }
   }
+
+  @override
+  ParticleEmitter? createImpactEffect() {
+    // Arrow creates small blood splatter on impact
+    return ParticleEmitter(
+      position: Vector2(center.x, center.y),
+      type: ParticleType.blood,
+      particleCount: 4,
+      emissionRate: 0.01,
+      spreadAngle: math.pi,
+      minSpeed: 30.0,
+      maxSpeed: 80.0,
+      minLifetime: 0.3,
+      maxLifetime: 0.6,
+      colors: [Colors.red, Colors.red.shade800],
+      minSize: 1.5,
+      maxSize: 3.0,
+      gravity: 40.0,
+    );
+  }
+
+  @override
+  ParticleEmitter? createTrailEffect() {
+    // Arrow creates minimal trail
+    return ParticleEmitter(
+      position: Vector2(center.x, center.y),
+      type: ParticleType.trail,
+      particleCount: 1,
+      emissionRate: 0.03,
+      spreadAngle: math.pi * 0.1,
+      minSpeed: 15.0,
+      maxSpeed: 25.0,
+      minLifetime: 0.2,
+      maxLifetime: 0.4,
+      colors: [color.withAlpha(120), Colors.brown.withAlpha(80)],
+      minSize: 1.0,
+      maxSize: 2.0,
+      gravity: 0.0,
+    );
+  }
+
+  @override
+  AudioEvent? getImpactSound() => AudioEvent.arrowHit;
 }
 
 /// Cannonball projectile from Cannon Tower
@@ -306,6 +423,49 @@ class Cannonball extends Projectile {
     // This will require access to the entity manager
     super.onHit();
   }
+
+  @override
+  ParticleEmitter? createImpactEffect() {
+    // Cannonball creates explosion on impact
+    return ParticleEmitter(
+      position: Vector2(center.x, center.y),
+      type: ParticleType.explosion,
+      particleCount: 12,
+      emissionRate: 0.01,
+      spreadAngle: math.pi * 2,
+      minSpeed: 60.0,
+      maxSpeed: 150.0,
+      minLifetime: 0.4,
+      maxLifetime: 0.8,
+      colors: [Colors.orange, Colors.red, Colors.yellow, Colors.grey],
+      minSize: 3.0,
+      maxSize: 8.0,
+      gravity: 50.0,
+    );
+  }
+
+  @override
+  ParticleEmitter? createTrailEffect() {
+    // Cannonball creates smoke trail
+    return ParticleEmitter(
+      position: Vector2(center.x, center.y),
+      type: ParticleType.smoke,
+      particleCount: 2,
+      emissionRate: 0.02,
+      spreadAngle: math.pi * 0.3,
+      minSpeed: 20.0,
+      maxSpeed: 40.0,
+      minLifetime: 0.5,
+      maxLifetime: 1.0,
+      colors: [Colors.grey, Colors.grey.shade600],
+      minSize: 2.0,
+      maxSize: 5.0,
+      gravity: -10.0, // Float upward
+    );
+  }
+
+  @override
+  AudioEvent? getImpactSound() => AudioEvent.explosionHit;
 }
 
 /// Magic bolt projectile from Magic Tower
@@ -339,6 +499,49 @@ class MagicBolt extends Projectile {
       (target as Enemy).applySlow(slowStrength, slowDuration);
     }
   }
+
+  @override
+  ParticleEmitter? createImpactEffect() {
+    // Magic bolt creates magical sparkles on impact
+    return ParticleEmitter(
+      position: Vector2(center.x, center.y),
+      type: ParticleType.magic,
+      particleCount: 8,
+      emissionRate: 0.01,
+      spreadAngle: math.pi * 2,
+      minSpeed: 50.0,
+      maxSpeed: 120.0,
+      minLifetime: 0.3,
+      maxLifetime: 0.7,
+      colors: [Colors.purple, Colors.pink, Colors.blue, Colors.white],
+      minSize: 2.0,
+      maxSize: 5.0,
+      gravity: -20.0, // Float upward
+    );
+  }
+
+  @override
+  ParticleEmitter? createTrailEffect() {
+    // Magic bolt creates magical trail
+    return ParticleEmitter(
+      position: Vector2(center.x, center.y),
+      type: ParticleType.sparkle,
+      particleCount: 3,
+      emissionRate: 0.02,
+      spreadAngle: math.pi * 0.4,
+      minSpeed: 20.0,
+      maxSpeed: 50.0,
+      minLifetime: 0.4,
+      maxLifetime: 0.8,
+      colors: [Colors.purple.withAlpha(150), Colors.pink.withAlpha(120)],
+      minSize: 1.5,
+      maxSize: 3.5,
+      gravity: -15.0, // Float upward
+    );
+  }
+
+  @override
+  AudioEvent? getImpactSound() => AudioEvent.magicHit;
 }
 
 /// Sniper bullet projectile from Sniper Tower
@@ -379,4 +582,49 @@ class SniperBullet extends Projectile {
       }
     }
   }
+
+  @override
+  ParticleEmitter? createImpactEffect() {
+    // Sniper bullet creates precise impact with sparks
+    return ParticleEmitter(
+      position: Vector2(center.x, center.y),
+      type: ParticleType.sparkle,
+      particleCount: isCritical ? 10 : 6,
+      emissionRate: 0.01,
+      spreadAngle: math.pi,
+      minSpeed: 80.0,
+      maxSpeed: 180.0,
+      minLifetime: 0.2,
+      maxLifetime: 0.5,
+      colors: isCritical
+          ? [Colors.yellow, Colors.orange, Colors.red, Colors.white]
+          : [Colors.yellow, Colors.white, Colors.lightGreen],
+      minSize: isCritical ? 3.0 : 2.0,
+      maxSize: isCritical ? 6.0 : 4.0,
+      gravity: 30.0,
+    );
+  }
+
+  @override
+  ParticleEmitter? createTrailEffect() {
+    // Sniper bullet creates fast, precise trail
+    return ParticleEmitter(
+      position: Vector2(center.x, center.y),
+      type: ParticleType.trail,
+      particleCount: 1,
+      emissionRate: 0.01,
+      spreadAngle: math.pi * 0.05, // Very focused
+      minSpeed: 10.0,
+      maxSpeed: 20.0,
+      minLifetime: 0.1,
+      maxLifetime: 0.2,
+      colors: [Colors.yellow.withAlpha(180), Colors.white.withAlpha(120)],
+      minSize: 1.0,
+      maxSize: 2.0,
+      gravity: 0.0,
+    );
+  }
+
+  @override
+  AudioEvent? getImpactSound() => AudioEvent.arrowHit; // Similar to arrow for now
 }
