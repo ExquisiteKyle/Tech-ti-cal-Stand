@@ -1,7 +1,8 @@
 import 'package:equatable/equatable.dart';
+import 'tile_system.dart';
 
 /// Enumeration of possible game states
-enum GameStatus { menu, playing, paused, gameOver, victory, loading }
+enum GameStatus { menu, preparing, playing, paused, gameOver, victory, loading }
 
 /// Represents the current state of the game
 class GameState extends Equatable {
@@ -14,6 +15,9 @@ class GameState extends Equatable {
   final bool isPaused;
   final DateTime? gameStartTime;
   final Duration? gameDuration;
+  final DateTime? preparationStartTime;
+  final int preparationTimeSeconds;
+  final TileSystem? tileSystem;
 
   const GameState({
     this.status = GameStatus.menu,
@@ -25,6 +29,9 @@ class GameState extends Equatable {
     this.isPaused = false,
     this.gameStartTime,
     this.gameDuration,
+    this.preparationStartTime,
+    this.preparationTimeSeconds = 10,
+    this.tileSystem,
   });
 
   /// Create initial game state
@@ -39,8 +46,14 @@ class GameState extends Equatable {
     gameStartTime: DateTime.now(),
   );
 
-  /// Create playing state
-  GameState startGame() =>
+  /// Start preparation phase (countdown before wave begins)
+  GameState startPreparation() => copyWith(
+    status: GameStatus.preparing,
+    preparationStartTime: DateTime.now(),
+  );
+
+  /// Start the actual game after preparation
+  GameState startPlaying() =>
       copyWith(status: GameStatus.playing, gameStartTime: DateTime.now());
 
   /// Pause the game
@@ -109,6 +122,9 @@ class GameState extends Equatable {
     bool? isPaused,
     DateTime? gameStartTime,
     Duration? gameDuration,
+    DateTime? preparationStartTime,
+    int? preparationTimeSeconds,
+    TileSystem? tileSystem,
   }) => GameState(
     status: status ?? this.status,
     gold: gold ?? this.gold,
@@ -119,6 +135,10 @@ class GameState extends Equatable {
     isPaused: isPaused ?? this.isPaused,
     gameStartTime: gameStartTime ?? this.gameStartTime,
     gameDuration: gameDuration ?? this.gameDuration,
+    preparationStartTime: preparationStartTime ?? this.preparationStartTime,
+    preparationTimeSeconds:
+        preparationTimeSeconds ?? this.preparationTimeSeconds,
+    tileSystem: tileSystem ?? this.tileSystem,
   );
 
   // Convenience getters
@@ -126,6 +146,17 @@ class GameState extends Equatable {
   bool get isGameOver => status == GameStatus.gameOver;
   bool get isVictory => status == GameStatus.victory;
   bool get isInMenu => status == GameStatus.menu;
+  bool get isPreparing => status == GameStatus.preparing;
+
+  // Get remaining preparation time in seconds
+  int get remainingPreparationTime {
+    if (preparationStartTime == null || !isPreparing) return 0;
+    final elapsed = DateTime.now().difference(preparationStartTime!).inSeconds;
+    return (preparationTimeSeconds - elapsed).clamp(0, preparationTimeSeconds);
+  }
+
+  // Check if preparation time has ended
+  bool get isPreparationTimeUp => isPreparing && remainingPreparationTime <= 0;
 
   // Convenience methods
   bool canAfford(int cost) => gold >= cost;
@@ -142,6 +173,9 @@ class GameState extends Equatable {
     isPaused,
     gameStartTime,
     gameDuration,
+    preparationStartTime,
+    preparationTimeSeconds,
+    tileSystem,
   ];
 
   @override

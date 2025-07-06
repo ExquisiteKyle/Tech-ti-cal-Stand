@@ -231,7 +231,6 @@ class PathManager {
     final segmentLength = start.distanceTo(end) / segments;
 
     for (int i = 0; i <= segments; i++) {
-      final progress = i / segments;
       final basePosition = Vector2(
         start.x + direction.x * segmentLength * i,
         start.y + direction.y * segmentLength * i,

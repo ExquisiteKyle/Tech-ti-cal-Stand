@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../game/entity_manager.dart';
 import '../../features/game/domain/models/tower.dart';
-import '../../features/game/domain/models/enemy.dart';
-import '../../features/game/domain/models/projectile.dart';
 import '../../features/game/domain/models/path.dart';
 import '../../features/game/domain/models/wave.dart';
+import '../../features/game/domain/models/tile_system.dart';
 import '../../features/game/presentation/providers/tower_selection_provider.dart';
 import '../../features/game/presentation/providers/game_state_provider.dart';
 import '../../shared/models/vector2.dart';
-import '../../shared/models/entity.dart';
 
 /// Interactive game canvas widget
 class GameCanvas extends ConsumerStatefulWidget {
@@ -46,6 +43,19 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
     _initializeGame();
   }
 
+  @override
+  void didUpdateWidget(GameCanvas oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Update path if it changed
+    if (widget.currentPath != oldWidget.currentPath) {
+      _currentPath = widget.currentPath ?? _createDefaultPath();
+      // Debug: print('GameCanvas: Path updated with ${_currentPath.waypoints.length} waypoints');
+      // Debug: print('GameCanvas: First waypoint: ${_currentPath.waypoints.first.position}');
+      // Debug: print('GameCanvas: Last waypoint: ${_currentPath.waypoints.last.position}');
+    }
+  }
+
   void _initializeGame() {
     // Use provided managers or create defaults
     _waveManager = widget.waveManager ?? WaveManager();
@@ -56,19 +66,138 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
     }
 
     // Use provided path or create default
-    _currentPath =
-        widget.currentPath ??
-        GamePath(
-          id: 'demo_path',
-          name: 'Demo Path',
-          waypoints: [
-            Waypoint(position: Vector2(0, 200), id: 'start'),
-            Waypoint(position: Vector2(150, 150), id: 'mid1'),
-            Waypoint(position: Vector2(300, 250), id: 'mid2'),
-            Waypoint(position: Vector2(450, 180), id: 'mid3'),
-            Waypoint(position: Vector2(600, 200), id: 'end'),
-          ],
-        );
+    _currentPath = widget.currentPath ?? _createDefaultPath();
+
+    // Debug: print('GameCanvas: Initialized with ${_currentPath.waypoints.length} waypoints');
+    // Debug: print('GameCanvas: First waypoint: ${_currentPath.waypoints.first.position}');
+    // Debug: print('GameCanvas: Last waypoint: ${_currentPath.waypoints.last.position}');
+  }
+
+  GamePath _createDefaultPath() {
+    // Get current screen size from context
+    final screenSize = MediaQuery.of(context).size;
+
+    // Calculate safe boundaries (accounting for UI elements)
+    final topHudHeight = screenSize.height < 600
+        ? 60.0
+        : (screenSize.height < 800 ? 85.0 : 120.0);
+    final bottomUIHeight = screenSize.height < 600
+        ? 120.0
+        : (screenSize.height < 800 ? 150.0 : 200.0);
+
+    // Define playable area boundaries with padding
+    final horizontalPadding = 20.0; // 20px padding from left/right edges
+    final verticalPadding = 20.0; // 20px padding from top/bottom edges
+
+    final leftBoundary = horizontalPadding;
+    final rightBoundary = screenSize.width - horizontalPadding;
+    final topBoundary = topHudHeight + verticalPadding;
+    final bottomBoundary = screenSize.height - bottomUIHeight - verticalPadding;
+
+    // Calculate path points as percentages of playable area
+    final playableWidth = rightBoundary - leftBoundary;
+    final playableHeight = bottomBoundary - topBoundary;
+
+    // Helper function to snap coordinates to tile centers using tile system coordinates
+    Vector2 snapToTileCenter(double x, double y) {
+      final tileSize = TileSystem.tileSize;
+
+      // Use the same grid calculation as TileSystem
+      final cols =
+          14; // Force exactly 14 tiles horizontally (same as TileSystem)
+      final rows = (screenSize.height / tileSize).floor();
+
+      // Calculate offset to center the grid within the screen (same as TileSystem)
+      final gridWidth = cols * tileSize;
+      final gridHeight = rows * tileSize;
+      final offsetX = (screenSize.width - gridWidth) / 2;
+      final offsetY = (screenSize.height - gridHeight) / 2;
+
+      // Convert world position to grid coordinates
+      int tileX = ((x - offsetX) / tileSize).round();
+      int tileY = ((y - offsetY) / tileSize).round();
+
+      // Ensure we don't use edge tiles (keep at least 1 tile margin)
+      tileX = tileX.clamp(1, cols - 2);
+      tileY = tileY.clamp(1, rows - 2);
+
+      // Return tile center position using the same calculation as TileSystem
+      return Vector2(
+        offsetX + tileX * tileSize + tileSize / 2,
+        offsetY + tileY * tileSize + tileSize / 2,
+      );
+    }
+
+    return GamePath(
+      id: 'demo_path',
+      name: 'Demo Path',
+      waypoints: [
+        // Start from left edge at center height - snap to tile center
+        Waypoint(
+          position: snapToTileCenter(
+            leftBoundary,
+            topBoundary + playableHeight * 0.5,
+          ),
+          id: 'start',
+        ),
+        // Move right horizontally (20% of playable width) - snap to tile center
+        Waypoint(
+          position: snapToTileCenter(
+            leftBoundary + playableWidth * 0.2,
+            topBoundary + playableHeight * 0.5,
+          ),
+          id: 'h1',
+        ),
+        // Move up vertically (to 25% from top) - snap to tile center
+        Waypoint(
+          position: snapToTileCenter(
+            leftBoundary + playableWidth * 0.2,
+            topBoundary + playableHeight * 0.25,
+          ),
+          id: 'v1',
+        ),
+        // Move right horizontally (to 50% width) - snap to tile center
+        Waypoint(
+          position: snapToTileCenter(
+            leftBoundary + playableWidth * 0.5,
+            topBoundary + playableHeight * 0.25,
+          ),
+          id: 'h2',
+        ),
+        // Move down vertically (to 75% from top) - snap to tile center
+        Waypoint(
+          position: snapToTileCenter(
+            leftBoundary + playableWidth * 0.5,
+            topBoundary + playableHeight * 0.75,
+          ),
+          id: 'v2',
+        ),
+        // Move right horizontally (to 75% width) - snap to tile center
+        Waypoint(
+          position: snapToTileCenter(
+            leftBoundary + playableWidth * 0.75,
+            topBoundary + playableHeight * 0.75,
+          ),
+          id: 'h3',
+        ),
+        // Move up vertically (to 40% from top) - snap to tile center
+        Waypoint(
+          position: snapToTileCenter(
+            leftBoundary + playableWidth * 0.75,
+            topBoundary + playableHeight * 0.4,
+          ),
+          id: 'v3',
+        ),
+        // Move right horizontally to end - snap to tile center
+        Waypoint(
+          position: snapToTileCenter(
+            rightBoundary,
+            topBoundary + playableHeight * 0.4,
+          ),
+          id: 'end',
+        ),
+      ],
+    );
   }
 
   void _handleTapUp(TapUpDetails details) {
@@ -90,9 +219,12 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
         // Select tower for upgrade
         towerSelectionNotifier.selectExistingTower(clickedTower);
       } else {
-        // Clear selection if clicking empty space
-        towerSelectionNotifier.clearSelection();
-        widget.onTap?.call();
+        // Only clear selection and call onTap if we're not in tower selection mode
+        if (towerSelection.selectedTowerType == null) {
+          towerSelectionNotifier.clearSelection();
+          widget.onTap?.call();
+        }
+        // If a tower is selected but not in placing mode, keep the selection
       }
     }
   }
@@ -101,56 +233,125 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
     final towerSelection = ref.read(towerSelectionProvider);
 
     if (towerSelection.isSelecting) {
+      final position = Vector2(
+        details.localPosition.dx,
+        details.localPosition.dy,
+      );
+
       setState(() {
-        _towerPreviewPosition = Vector2(
-          details.localPosition.dx,
-          details.localPosition.dy,
-        );
+        _towerPreviewPosition = position;
       });
+
+      // Highlight tile under cursor
+      try {
+        final gameState = ref.read(gameStateProvider);
+        final tileSystem = gameState.tileSystem;
+        if (tileSystem != null) {
+          final tile = tileSystem.getTileAtWorldPosition(position);
+          if (tile != null) {
+            tileSystem.highlightTile(tile.gridX, tile.gridY);
+          }
+        }
+      } catch (e) {
+        // Ignore tile highlighting errors to prevent crashes
+        // Debug: print('Tile highlighting error: $e');
+      }
     }
   }
 
   void _placeTower(Vector2 position, TowerType towerType) {
-    // Check if position is valid (not on path, not too close to other towers)
-    if (!_isValidTowerPosition(position)) return;
+    // Debug: _placeTower called: position=$position, towerType=$towerType
+
+    final gameState = ref.read(gameStateProvider);
+    final tileSystem = gameState.tileSystem;
+
+    if (tileSystem == null) {
+      // Debug: Tower placement failed: No tile system available
+      return;
+    }
+
+    // Get the tile at this position
+    final tile = tileSystem.getTileAtWorldPosition(position);
+    // Debug: _placeTower: tile found=${tile != null}, tile position=${tile?.worldPosition}
+
+    if (tile == null) {
+      // Debug: Tower placement failed: No tile found at position $position
+      return;
+    }
+
+    final canPlace = tileSystem.canPlaceTower(tile.gridX, tile.gridY);
+    // Debug: _placeTower: canPlaceTower=$canPlace, tile state=${tile.state}
+
+    if (!canPlace) {
+      // Debug: Tower placement failed: Cannot place tower on tile (${tile.gridX}, ${tile.gridY})
+      return;
+    }
 
     final gameStateNotifier = ref.read(gameStateProvider.notifier);
     final towerSelectionNotifier = ref.read(towerSelectionProvider.notifier);
 
     // Get tower cost and check affordability
     int cost = _getTowerCost(towerType);
-    if (!gameStateNotifier.spendGold(cost)) return;
+    if (!gameStateNotifier.spendGold(cost)) {
+      // Debug: Tower placement failed: Insufficient gold
+      return;
+    }
 
+    // Debug: Tower placement successful at tile: (${tile.gridX}, ${tile.gridY})
+
+    // Use tile center position for precise placement
+    // Adjust position so tower center aligns with tile center
     Tower? tower;
     switch (towerType) {
       case TowerType.archer:
-        tower = ArcherTower(position: position);
+        tower = ArcherTower(position: tile.worldPosition);
         break;
       case TowerType.cannon:
-        tower = CannonTower(position: position);
+        tower = CannonTower(position: tile.worldPosition);
         break;
       case TowerType.magic:
-        tower = MagicTower(position: position);
+        tower = MagicTower(position: tile.worldPosition);
         break;
       case TowerType.sniper:
-        tower = SniperTower(position: position);
+        tower = SniperTower(position: tile.worldPosition);
         break;
     }
 
-    if (tower != null) {
-      // Set up projectile creation callback
-      tower.onProjectileCreated = (projectile) {
-        widget.entityManager.addEntity(projectile);
-      };
+    // Adjust tower position so its center aligns with tile center
+    final adjustedPosition = Vector2(
+      tile.worldPosition.x - tower.size.x / 2,
+      tile.worldPosition.y - tower.size.y / 2,
+    );
+    tower.position = adjustedPosition;
 
-      widget.entityManager.addEntity(tower);
+    // Debug: Tower created: ${tower.name} at position ${tower.position}
 
-      // Clear selection
-      towerSelectionNotifier.clearSelection();
-      setState(() {
-        _towerPreviewPosition = null;
-      });
+    // Set up projectile creation callback
+    tower.onProjectileCreated = (projectile) {
+      widget.entityManager.addEntity(projectile);
+    };
+
+    // Set up particle emitter creation callback
+    tower.onParticleEmitterCreated = (emitter) {
+      widget.entityManager.addParticleEmitter(emitter);
+    };
+
+    widget.entityManager.addEntity(tower);
+    // Debug: Tower added to entity manager. Total entities: ${widget.entityManager.entities.length}
+
+    // Update tile system to mark tile as occupied
+    try {
+      tileSystem.placeTower(tile.gridX, tile.gridY, tower.id);
+      // Debug: Tile system updated: tile (${tile.gridX}, ${tile.gridY}) marked as occupied
+    } catch (e) {
+      // Debug: Tile system update error: $e
     }
+
+    // Clear selection
+    towerSelectionNotifier.clearSelection();
+    setState(() {
+      _towerPreviewPosition = null;
+    });
   }
 
   int _getTowerCost(TowerType towerType) {
@@ -166,25 +367,6 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
     }
   }
 
-  bool _isValidTowerPosition(Vector2 position) {
-    // Check if too close to path
-    for (final waypoint in _currentPath.waypoints) {
-      if (position.distanceTo(waypoint.position) < 40) {
-        return false;
-      }
-    }
-
-    // Check if too close to existing towers
-    final towers = widget.entityManager.getEntitiesOfType<Tower>();
-    for (final tower in towers) {
-      if (position.distanceTo(tower.center) < 60) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
   /// Find tower at given position (for tower selection)
   Tower? _getTowerAtPosition(Vector2 position) {
     final towers = widget.entityManager.getEntitiesOfType<Tower>();
@@ -196,14 +378,10 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
     return null;
   }
 
-  void _updateGame() {
-    // Game update logic is now handled by the GameEngine
-    // This method is kept for future canvas-specific updates if needed
-  }
-
   @override
   Widget build(BuildContext context) {
     final towerSelection = ref.watch(towerSelectionProvider);
+    final gameState = ref.watch(gameStateProvider);
 
     return DragTarget<TowerType>(
       builder: (context, candidateData, rejectedData) {
@@ -218,42 +396,109 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
               towerPreviewPosition: _towerPreviewPosition,
               isDragActive: candidateData.isNotEmpty,
               selectedTower: towerSelection.selectedTower,
+              tileSystem: gameState.tileSystem,
             ),
             size: Size.infinite,
             child: Container(), // Transparent container to capture gestures
           ),
         );
       },
-      onWillAccept: (data) {
+      onWillAcceptWithDetails: (data) {
         // Check if we can accept this tower type
-        if (data == null) return false;
-
         final gameState = ref.read(gameStateProvider);
-        final cost = _getTowerCost(data);
-        return gameState.canAfford(cost);
-      },
-      onAccept: (towerType) {
-        // This is called when a tower is dropped, but we need position
-        // We'll handle the actual placement in onAcceptWithDetails
+        final cost = _getTowerCost(data.data);
+        final canAfford = gameState.canAfford(cost);
+
+        // Also check if position is valid for tile placement
+        final position = Vector2(data.offset.dx, data.offset.dy);
+        bool validPosition = true;
+
+        try {
+          final tileSystem = gameState.tileSystem;
+          if (tileSystem != null) {
+            final tile = tileSystem.getTileAtWorldPosition(position);
+            if (tile != null) {
+              final canPlace = tileSystem.canPlaceTower(tile.gridX, tile.gridY);
+              // Debug: Tile at (${tile.gridX}, ${tile.gridY}): state=${tile.state}, canPlace=$canPlace
+              validPosition = canPlace;
+            } else {
+              // Debug: No tile found at position $position
+              validPosition = false;
+            }
+          }
+        } catch (e) {
+          // If tile system access fails, fall back to allowing placement
+          validPosition = true;
+          // Debug: Tile validation error: $e
+        }
+
+        // Debug: onWillAcceptWithDetails: tower=${data.data}, cost=$cost, gold=${gameState.gold}, canAfford=$canAfford, validPosition=$validPosition
+        return canAfford && validPosition;
       },
       onAcceptWithDetails: (details) {
         final position = Vector2(details.offset.dx, details.offset.dy);
+        // Debug: onAcceptWithDetails called: position=$position, tower=${details.data}
 
-        _placeTower(position, details.data);
+        // Snap to tile center for precise placement
+        try {
+          final gameState = ref.read(gameStateProvider);
+          final tileSystem = gameState.tileSystem;
+          // Debug: Tile system available: ${tileSystem != null}
+
+          if (tileSystem != null) {
+            final tile = tileSystem.getTileAtWorldPosition(position);
+            // Debug: Found tile: ${tile != null}, position: ${tile?.worldPosition}
+            if (tile != null) {
+              // Debug: Placing tower at tile center: ${tile.worldPosition}
+              _placeTower(tile.worldPosition, details.data);
+            } else {
+              // Debug: No tile found, placing at original position
+              _placeTower(position, details.data);
+            }
+          } else {
+            // Debug: No tile system, placing at original position
+            _placeTower(position, details.data);
+          }
+        } catch (e) {
+          // Debug: Tile placement error: $e
+          _placeTower(position, details.data);
+        }
       },
       onMove: (details) {
         // Update preview position during drag
-        if (details.data != null) {
-          setState(() {
-            _towerPreviewPosition = Vector2(
-              details.offset.dx,
-              details.offset.dy,
-            );
-          });
+        final position = Vector2(details.offset.dx, details.offset.dy);
+        setState(() {
+          _towerPreviewPosition = position;
+        });
+
+        // Highlight tile under cursor
+        try {
+          final gameState = ref.read(gameStateProvider);
+          final tileSystem = gameState.tileSystem;
+          if (tileSystem != null) {
+            final tile = tileSystem.getTileAtWorldPosition(position);
+            if (tile != null) {
+              tileSystem.highlightTile(tile.gridX, tile.gridY);
+            }
+          }
+        } catch (e) {
+          // Ignore tile highlighting errors to prevent crashes
+          // Debug: print('Tile highlighting error in onMove: $e');
         }
       },
       onLeave: (data) {
-        // Clear preview when drag leaves the canvas
+        // Clear preview and highlights when drag leaves the canvas
+        try {
+          final gameState = ref.read(gameStateProvider);
+          final tileSystem = gameState.tileSystem;
+          if (tileSystem != null) {
+            tileSystem.clearHighlights();
+          }
+        } catch (e) {
+          // Ignore tile clearing errors to prevent crashes
+          // Debug: print('Tile clearing error: $e');
+        }
+
         setState(() {
           _towerPreviewPosition = null;
         });
@@ -293,6 +538,7 @@ class GameCanvasPainter extends CustomPainter {
   final Vector2? towerPreviewPosition;
   final bool isDragActive;
   final Tower? selectedTower;
+  final TileSystem? tileSystem;
 
   GameCanvasPainter({
     required this.entityManager,
@@ -301,12 +547,18 @@ class GameCanvasPainter extends CustomPainter {
     this.towerPreviewPosition,
     this.isDragActive = false,
     this.selectedTower,
+    this.tileSystem,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     // Draw background
     _drawBackground(canvas, size);
+
+    // Draw tile system
+    if (tileSystem != null) {
+      _drawTileSystem(canvas, size);
+    }
 
     // Draw path
     _drawPath(canvas, size);
@@ -327,23 +579,79 @@ class GameCanvasPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
+  }
 
-    // Draw grid pattern
-    final gridPaint = Paint()
-      ..color = const Color(0xFFE6E6E6).withAlpha(100)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
+  void _drawTileSystem(Canvas canvas, Size size) {
+    if (tileSystem == null) return;
 
-    const gridSize = 40.0;
+    try {
+      final emptyTilePaint = Paint()
+        ..color = const Color(0xFFE8F5E8)
+            .withAlpha(100) // Soft pastel green for empty tiles
+        ..style = PaintingStyle.fill;
 
-    // Vertical lines
-    for (double x = 0; x < size.width; x += gridSize) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
-    }
+      final occupiedTilePaint = Paint()
+        ..color = const Color(0xFFF5E8E8)
+            .withAlpha(120) // Soft pastel pink for occupied tiles
+        ..style = PaintingStyle.fill;
 
-    // Horizontal lines
-    for (double y = 0; y < size.height; y += gridSize) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+      final blockedTilePaint = Paint()
+        ..color = const Color(0xFFE8E8F5)
+            .withAlpha(80) // Soft pastel purple for blocked tiles
+        ..style = PaintingStyle.fill;
+
+      final highlightedTilePaint = Paint()
+        ..color = const Color(0xFFFFF5E8)
+            .withAlpha(150) // Soft pastel peach for highlighted tiles
+        ..style = PaintingStyle.fill;
+
+      final invalidTilePaint = Paint()
+        ..color = Colors
+            .black // Black for invalid edge tiles
+        ..style = PaintingStyle.fill;
+
+      final tileBorderPaint = Paint()
+        ..color = const Color(0xFFCCCCCC).withAlpha(150)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1;
+
+      // Draw tiles
+      for (final row in tileSystem!.tiles) {
+        for (final tile in row) {
+          final rect = Rect.fromCenter(
+            center: Offset(tile.worldPosition.x, tile.worldPosition.y),
+            width: TileSystem.tileSize,
+            height: TileSystem.tileSize,
+          );
+
+          // Choose paint based on tile state
+          Paint fillPaint;
+          switch (tile.state) {
+            case TileState.empty:
+              fillPaint = emptyTilePaint;
+              break;
+            case TileState.occupied:
+              fillPaint = occupiedTilePaint;
+              break;
+            case TileState.blocked:
+              fillPaint = blockedTilePaint;
+              break;
+            case TileState.highlighted:
+              fillPaint = highlightedTilePaint;
+              break;
+            case TileState.invalid:
+              fillPaint = invalidTilePaint;
+              break;
+          }
+
+          // Draw tile
+          canvas.drawRect(rect, fillPaint);
+          canvas.drawRect(rect, tileBorderPaint);
+        }
+      }
+    } catch (e) {
+      // If tile system drawing fails, skip rendering tiles
+      // Debug: print('Tile system drawing error: $e');
     }
   }
 
@@ -434,10 +742,19 @@ class GameCanvasPainter extends CustomPainter {
         break;
     }
 
-    final center = Offset(towerPreviewPosition!.x, towerPreviewPosition!.y);
+    // Snap preview to tile center if tile system is available
+    Vector2 previewPos = towerPreviewPosition!;
+    if (tileSystem != null) {
+      final tile = tileSystem!.getTileAtWorldPosition(towerPreviewPosition!);
+      if (tile != null) {
+        previewPos = tile.worldPosition;
+      }
+    }
+
+    final center = Offset(previewPos.x, previewPos.y);
 
     // Check if position is valid for placement
-    bool isValidPosition = _isValidPreviewPosition(towerPreviewPosition!);
+    bool isValidPosition = _isValidPreviewPosition(previewPos);
 
     // Choose colors based on validity and drag state
     Color previewColor = isValidPosition ? towerColor : Colors.red;
@@ -487,6 +804,14 @@ class GameCanvasPainter extends CustomPainter {
   }
 
   bool _isValidPreviewPosition(Vector2 position) {
+    // Use tile system validation if available
+    if (tileSystem != null) {
+      final tile = tileSystem!.getTileAtWorldPosition(position);
+      if (tile == null) return false;
+      return tileSystem!.canPlaceTower(tile.gridX, tile.gridY);
+    }
+
+    // Fallback to old validation logic
     // Check if too close to path
     for (final waypoint in path.waypoints) {
       if (position.distanceTo(waypoint.position) < 40) {

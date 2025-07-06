@@ -3,6 +3,7 @@ import '../../../../shared/models/entity.dart';
 import '../../../../shared/models/vector2.dart';
 import 'enemy.dart';
 import 'projectile.dart';
+import 'particle.dart';
 
 /// Enumeration of tower types
 enum TowerType { archer, cannon, magic, sniper }
@@ -70,12 +71,8 @@ abstract class Tower extends Entity {
       // Debug why no enemies in range occasionally
       if (enemies.isNotEmpty &&
           DateTime.now().millisecondsSinceEpoch % 2000 < 50) {
-        final closest = enemies.reduce(
-          (a, b) => distanceTo(a) < distanceTo(b) ? a : b,
-        );
-        print(
-          '${name} no enemies in range. Closest enemy at distance ${distanceTo(closest)}, range: ${range}',
-        );
+        // final closest = enemies.reduce((a, b) => distanceTo(a) < distanceTo(b) ? a : b);
+        // Debug: print('${name} no enemies in range. Closest enemy at distance ${distanceTo(closest)}, range: ${range}');
       }
       return null;
     }
@@ -89,16 +86,14 @@ abstract class Tower extends Entity {
   /// Perform an attack on the current target
   void attack(Entity target, double currentTime) {
     if (canAttack(currentTime)) {
-      print('${name} attacking target at ${target.center}');
+      // Debug: print('${name} attacking target at ${target.center}');
       final projectile = createProjectile(target);
       if (projectile != null) {
-        print(
-          'Created projectile: ${projectile.type} with damage ${projectile.damage}',
-        );
+        // Debug: print('Created projectile: ${projectile.type} with damage ${projectile.damage}');
         // The projectile will be added to the entity manager
         // This callback will be set by the tower manager
         onProjectileCreated?.call(projectile);
-        print('Projectile added to entity manager');
+        // Debug: print('Projectile added to entity manager');
       }
       lastAttackTime = currentTime;
     }
@@ -109,6 +104,9 @@ abstract class Tower extends Entity {
 
   /// Callback for when a projectile is created
   void Function(Projectile)? onProjectileCreated;
+
+  /// Callback for when a particle emitter is created
+  void Function(ParticleEmitter)? onParticleEmitterCreated;
 
   /// Upgrade this tower to the next level
   bool upgrade(UpgradePath path) {
@@ -225,16 +223,14 @@ class ArcherTower extends Tower {
 
   @override
   Projectile? createProjectile(Entity target) {
-    print(
-      'ArcherTower creating arrow at ${center} for target at ${target.center}',
-    );
-    print('ArcherTower damage: ${damage}, baseDamage: ${baseDamage}');
+    // Debug: print('ArcherTower creating arrow at ${center} for target at ${target.center}');
+    // Debug: print('ArcherTower damage: ${damage}, baseDamage: ${baseDamage}');
     final arrow = Arrow(
       target: target,
       damage: damage,
       position: Vector2(center.x, center.y),
     );
-    print('Arrow created with damage: ${arrow.damage}');
+    // Debug: print('Arrow created with damage: ${arrow.damage}');
     return arrow;
   }
 
@@ -270,9 +266,7 @@ class CannonTower extends Tower {
 
   @override
   Projectile? createProjectile(Entity target) {
-    print(
-      'CannonTower creating cannonball at ${center} for target at ${target.center}',
-    );
+    // Debug: print('CannonTower creating cannonball at ${center} for target at ${target.center}');
     return Cannonball(
       target: target,
       damage: damage,

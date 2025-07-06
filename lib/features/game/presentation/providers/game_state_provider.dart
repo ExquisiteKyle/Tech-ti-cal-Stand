@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/game_state.dart';
 
@@ -8,11 +9,44 @@ final gameStateProvider = StateNotifierProvider<GameStateNotifier, GameState>(
 
 /// Notifier for game state changes
 class GameStateNotifier extends StateNotifier<GameState> {
+  Timer? _preparationTimer;
+
   GameStateNotifier() : super(GameState.initial());
 
-  /// Start a new game
-  void startGame() {
-    state = state.startGame();
+  /// Start preparation phase (countdown before actual game)
+  void startPreparation() {
+    state = state.startPreparation();
+    _startPreparationTimer();
+  }
+
+  /// Start the actual game immediately (skip preparation)
+  void startGameDirectly() {
+    state = state.startPlaying();
+    _preparationTimer?.cancel();
+  }
+
+  void _startPreparationTimer() {
+    _preparationTimer?.cancel();
+    _preparationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        // Trigger state update to refresh countdown
+        state = state.copyWith();
+
+        // Check if preparation time is up
+        if (state.isPreparationTimeUp) {
+          timer.cancel();
+          state = state.startPlaying();
+        }
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _preparationTimer?.cancel();
+    super.dispose();
   }
 
   /// Pause the current game
@@ -75,6 +109,16 @@ class GameStateNotifier extends StateNotifier<GameState> {
     state = state.setGameSpeed(speed);
   }
 
+  /// Update game state with new values
+  void updateGameState(GameState newState) {
+    try {
+      state = newState;
+    } catch (e) {
+      // If state update fails, log the error but don't crash
+      // Debug: print('GameState update error: $e');
+    }
+  }
+
   /// Toggle game pause state
   void togglePause() {
     if (state.isPaused) {
@@ -122,4 +166,15 @@ final gameSpeedProvider = Provider<double>((ref) {
 /// Provider for pause state
 final isPausedProvider = Provider<bool>((ref) {
   return ref.watch(gameStateProvider).isPaused;
+});
+
+/// Provider for preparation phase information
+final preparationProvider = Provider<({bool isPreparing, int remainingTime})>((
+  ref,
+) {
+  final gameState = ref.watch(gameStateProvider);
+  return (
+    isPreparing: gameState.isPreparing,
+    remainingTime: gameState.remainingPreparationTime,
+  );
 });

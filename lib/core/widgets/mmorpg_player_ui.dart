@@ -6,8 +6,6 @@ class MMORPGPlayerUI extends StatefulWidget {
   final int playerLevel;
   final int currentHealth;
   final int maxHealth;
-  final int currentMana;
-  final int maxMana;
   final int gold;
   final int score;
   final int enemiesInField;
@@ -19,8 +17,6 @@ class MMORPGPlayerUI extends StatefulWidget {
     required this.playerLevel,
     required this.currentHealth,
     required this.maxHealth,
-    required this.currentMana,
-    required this.maxMana,
     required this.gold,
     required this.score,
     required this.enemiesInField,
@@ -34,11 +30,9 @@ class MMORPGPlayerUI extends StatefulWidget {
 class _MMORPGPlayerUIState extends State<MMORPGPlayerUI>
     with TickerProviderStateMixin {
   late AnimationController _healthAnimationController;
-  late AnimationController _manaAnimationController;
   late AnimationController _glowAnimationController;
 
   late Animation<double> _healthAnimation;
-  late Animation<double> _manaAnimation;
   late Animation<double> _glowAnimation;
 
   @override
@@ -47,11 +41,6 @@ class _MMORPGPlayerUIState extends State<MMORPGPlayerUI>
 
     _healthAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-
-    _manaAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
@@ -67,10 +56,6 @@ class _MMORPGPlayerUIState extends State<MMORPGPlayerUI>
       ),
     );
 
-    _manaAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _manaAnimationController, curve: Curves.easeOut),
-    );
-
     _glowAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
       CurvedAnimation(
         parent: _glowAnimationController,
@@ -80,14 +65,12 @@ class _MMORPGPlayerUIState extends State<MMORPGPlayerUI>
 
     // Start animations
     _healthAnimationController.forward();
-    _manaAnimationController.forward();
     _glowAnimationController.repeat(reverse: true);
   }
 
   @override
   void dispose() {
     _healthAnimationController.dispose();
-    _manaAnimationController.dispose();
     _glowAnimationController.dispose();
     super.dispose();
   }
@@ -95,7 +78,7 @@ class _MMORPGPlayerUIState extends State<MMORPGPlayerUI>
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(25), // Matches portrait circle
@@ -130,36 +113,32 @@ class _MMORPGPlayerUIState extends State<MMORPGPlayerUI>
         painter: PatternPainter(),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
           children: [
             // Character Portrait
             _buildCharacterPortrait(),
 
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
 
-            // Player Info and Bars
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Player Name
-                _buildPlayerName(),
+            // Player Info and Bars - Use Expanded to fill available space
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Player Name
+                  _buildPlayerName(),
 
-                const SizedBox(height: 4),
+                  const SizedBox(height: 1),
 
-                // Health Bar
-                _buildHealthBar(),
+                  // Health Bar
+                  _buildHealthBar(),
 
-                const SizedBox(height: 3),
+                  const SizedBox(height: 2),
 
-                // Mana/Energy Bar (using score as mana)
-                _buildManaBar(),
-
-                const SizedBox(height: 4),
-
-                // Resource Display
-                _buildResourceDisplay(),
-              ],
+                  // Resource Display
+                  _buildResourceDisplay(),
+                ],
+              ),
             ),
           ],
         ),
@@ -204,7 +183,7 @@ class _MMORPGPlayerUIState extends State<MMORPGPlayerUI>
 
   Widget _buildPlayerName() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A).withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(3),
@@ -220,7 +199,7 @@ class _MMORPGPlayerUIState extends State<MMORPGPlayerUI>
             widget.playerName,
             style: const TextStyle(
               color: Color(0xFFFFD700),
-              fontSize: 12,
+              fontSize: 10,
               fontWeight: FontWeight.bold,
               shadows: [
                 Shadow(
@@ -231,12 +210,12 @@ class _MMORPGPlayerUIState extends State<MMORPGPlayerUI>
               ],
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 3),
           Text(
             'Lv.${widget.playerLevel}',
             style: const TextStyle(
               color: Color(0xFFFFFFFF),
-              fontSize: 10,
+              fontSize: 8,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -263,16 +242,15 @@ class _MMORPGPlayerUIState extends State<MMORPGPlayerUI>
               'Health',
               style: TextStyle(
                 color: Color(0xFFFFFFFF),
-                fontSize: 10,
+                fontSize: 8,
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 2),
 
             // Health bar container
             Container(
-              width: 120,
-              height: 14,
+              width: double.infinity,
+              height: 20,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
@@ -296,60 +274,67 @@ class _MMORPGPlayerUIState extends State<MMORPGPlayerUI>
                     ),
                 ],
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Stack(
-                  children: [
-                    // Background
-                    Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Color(0xFF2D1B0E), Color(0xFF1A0F08)],
-                        ),
-                      ),
-                    ),
-
-                    // Health fill
-                    FractionallySizedBox(
-                      widthFactor: animatedPercentage,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: _getHealthColors(healthPercentage),
+              child: Stack(
+                children: [
+                  // Clipped health bar graphics
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Stack(
+                      children: [
+                        // Background
+                        Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Color(0xFF2D1B0E), Color(0xFF1A0F08)],
+                            ),
                           ),
                         ),
-                      ),
-                    ),
 
-                    // Inner highlight
-                    FractionallySizedBox(
-                      widthFactor: animatedPercentage,
-                      heightFactor: 0.4,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.white.withValues(alpha: 0.3),
-                              Colors.transparent,
-                            ],
+                        // Health fill
+                        FractionallySizedBox(
+                          widthFactor: animatedPercentage,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: _getHealthColors(healthPercentage),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
 
-                    // Health text
-                    Center(
+                        // Inner highlight
+                        FractionallySizedBox(
+                          widthFactor: animatedPercentage,
+                          heightFactor: 0.4,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.white.withValues(alpha: 0.3),
+                                  Colors.transparent,
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Health text (outside ClipRRect so it's not clipped)
+                  Positioned.fill(
+                    child: Center(
                       child: Text(
                         '${widget.currentHealth}/${widget.maxHealth}',
                         style: const TextStyle(
                           color: Color(0xFFFFD700),
-                          fontSize: 8,
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                           shadows: [
                             Shadow(
@@ -361,125 +346,8 @@ class _MMORPGPlayerUIState extends State<MMORPGPlayerUI>
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildManaBar() {
-    final manaPercentage = widget.maxMana > 0
-        ? (widget.currentMana / widget.maxMana).clamp(0.0, 1.0)
-        : 0.0;
-
-    return AnimatedBuilder(
-      animation: _manaAnimation,
-      builder: (context, child) {
-        final animatedPercentage = manaPercentage * _manaAnimation.value;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Mana label
-            const Text(
-              'Energy',
-              style: TextStyle(
-                color: Color(0xFFFFFFFF),
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 2),
-
-            // Mana bar container
-            Container(
-              width: 120,
-              height: 12,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: const Color(0xFF8B4513).withValues(alpha: 0.6),
-                  width: 2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
                   ),
                 ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: Stack(
-                  children: [
-                    // Background
-                    Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Color(0xFF0E1B2D), Color(0xFF081A0F)],
-                        ),
-                      ),
-                    ),
-
-                    // Mana fill
-                    FractionallySizedBox(
-                      widthFactor: animatedPercentage,
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Color(0xFF4169E1), Color(0xFF1E3A8A)],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Inner highlight
-                    FractionallySizedBox(
-                      widthFactor: animatedPercentage,
-                      heightFactor: 0.4,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.white.withValues(alpha: 0.2),
-                              Colors.transparent,
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Mana text
-                    Center(
-                      child: Text(
-                        '${widget.currentMana}',
-                        style: const TextStyle(
-                          color: Color(0xFFADD8E6),
-                          fontSize: 7,
-                          fontWeight: FontWeight.bold,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black,
-                              offset: Offset(1, 1),
-                              blurRadius: 2,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ],
@@ -492,31 +360,37 @@ class _MMORPGPlayerUIState extends State<MMORPGPlayerUI>
     return Row(
       children: [
         // Gold
-        _buildResourceItem(
-          icon: Icons.monetization_on,
-          label: 'Gold',
-          value: widget.gold.toString(),
-          color: const Color(0xFFFFD700),
+        Expanded(
+          child: _buildResourceItem(
+            icon: Icons.monetization_on,
+            label: 'Gold',
+            value: widget.gold.toString(),
+            color: const Color(0xFFFFD700),
+          ),
         ),
 
-        const SizedBox(width: 8),
+        const SizedBox(width: 2),
 
         // Score
-        _buildResourceItem(
-          icon: Icons.star,
-          label: 'Score',
-          value: widget.score.toString(),
-          color: const Color(0xFFDDA0DD),
+        Expanded(
+          child: _buildResourceItem(
+            icon: Icons.star,
+            label: 'Score',
+            value: widget.score.toString(),
+            color: const Color(0xFFDDA0DD),
+          ),
         ),
 
-        const SizedBox(width: 8),
+        const SizedBox(width: 2),
 
         // Enemy Counter
-        _buildResourceItem(
-          icon: Icons.bug_report,
-          label: 'Enemies',
-          value: widget.enemiesInField.toString(),
-          color: const Color(0xFFFF6B6B),
+        Expanded(
+          child: _buildResourceItem(
+            icon: Icons.bug_report,
+            label: 'Enemies',
+            value: widget.enemiesInField.toString(),
+            color: const Color(0xFFFF6B6B),
+          ),
         ),
       ],
     );
@@ -529,7 +403,7 @@ class _MMORPGPlayerUIState extends State<MMORPGPlayerUI>
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A).withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(3),
@@ -537,15 +411,19 @@ class _MMORPGPlayerUIState extends State<MMORPGPlayerUI>
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 10, color: color),
+          Icon(icon, size: 8, color: color),
           const SizedBox(width: 2),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

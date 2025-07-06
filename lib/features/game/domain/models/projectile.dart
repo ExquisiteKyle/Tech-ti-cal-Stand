@@ -34,8 +34,8 @@ abstract class Projectile extends Entity {
        hasHitTarget = false {
     // Calculate initial direction to target
     _calculateDirection();
-    print('Projectile created at ${position} targeting ${target.center}');
-    print('Projectile direction: ${direction}');
+    // Debug: print('Projectile created at $position targeting ${target.center}');
+    // Debug: print('Projectile direction: $direction');
   }
 
   /// Calculate direction vector to target
@@ -51,7 +51,7 @@ abstract class Projectile extends Entity {
       // Set rotation to face target
       rotation = math.atan2(direction.y, direction.x);
     } else {
-      print('Warning: Projectile and target are at same position!');
+      // Debug: print('Warning: Projectile and target are at same position!');
     }
   }
 
@@ -65,7 +65,7 @@ abstract class Projectile extends Entity {
   /// Apply damage to target and handle hit effects
   void _hitTarget() {
     if (!hasHitTarget && target.isActive) {
-      print('Projectile ${type} hitting target ${target.runtimeType}!');
+      // Debug: print('Projectile $type hitting target ${target.runtimeType}!');
       hasHitTarget = true;
       applyDamage();
       onHit();
@@ -77,10 +77,10 @@ abstract class Projectile extends Entity {
   void applyDamage() {
     if (target is Enemy) {
       final enemy = target as Enemy;
-      print('Projectile dealing ${damage} damage to ${enemy.name}');
-      print('Enemy health before: ${enemy.currentHealth}');
+      // Debug: print('Projectile dealing $damage damage to ${enemy.name}');
+      // Debug: print('Enemy health before: ${enemy.currentHealth}');
       enemy.takeDamage(damage);
-      print('Enemy health after: ${enemy.currentHealth}');
+      // Debug: print('Enemy health after: ${enemy.currentHealth}');
     }
   }
 
@@ -96,14 +96,14 @@ abstract class Projectile extends Entity {
 
     // Check if projectile should be destroyed due to lifetime
     if (lifetime >= maxLifetime) {
-      print('Projectile expired after ${lifetime} seconds');
+      // Debug: print('Projectile expired after $lifetime seconds');
       onDestroy();
       return;
     }
 
     // Check if target is still valid
     if (!target.isActive) {
-      print('Projectile target is no longer active');
+      // Debug: print('Projectile target is no longer active');
       onDestroy();
       return;
     }
@@ -116,25 +116,21 @@ abstract class Projectile extends Entity {
 
     // Move projectile
     final moveDistance = speed * deltaTime;
-    final oldPosition = Vector2(position.x, position.y);
     position = Vector2(
       position.x + direction.x * moveDistance,
       position.y + direction.y * moveDistance,
     );
 
-    final distanceToTarget = distanceTo(target);
+    // final distanceToTarget = distanceTo(target);
 
-    // Log more frequently for debugging
-    if (lifetime % 0.5 < deltaTime) {
-      // Log every 0.5 seconds
-      print(
-        'Projectile at ${position}, target at ${target.center}, distance: ${distanceToTarget}, active: ${target.isActive}',
-      );
-    }
+    // Debug projectile tracking (commented out for production)
+    // if (lifetime % 0.5 < deltaTime) {
+    //   print('Projectile at $position, target at ${target.center}, distance: $distanceToTarget, active: ${target.isActive}');
+    // }
 
     // Check if hit target
     if (_hasReachedTarget()) {
-      print('Projectile reached target!');
+      // Debug: print('Projectile reached target!');
       _hitTarget();
     }
   }
@@ -145,7 +141,7 @@ abstract class Projectile extends Entity {
 
   @override
   void onDestroy() {
-    print('Projectile ${type} destroyed at ${position}');
+    // Debug: print('Projectile $type destroyed at $position');
     super.onDestroy();
   }
 
@@ -272,20 +268,18 @@ class Arrow extends Projectile {
         maxLifetime: 3.0,
         size: Vector2(12, 4),
       ) {
-    print(
-      'Arrow created with ${damage} damage targeting ${target.runtimeType}',
-    );
+    // Debug: print('Arrow created with $damage damage targeting ${target.runtimeType}');
   }
 
   @override
   void applyDamage() {
-    print('Arrow applyDamage called with ${damage} damage');
+    // Debug: print('Arrow applyDamage called with $damage damage');
     if (target is Enemy) {
       final enemy = target as Enemy;
-      print('Arrow hitting ${enemy.name} with ${damage} damage');
-      print('Enemy health before Arrow hit: ${enemy.currentHealth}');
+      // Debug: print('Arrow hitting ${enemy.name} with $damage damage');
+      // Debug: print('Enemy health before Arrow hit: ${enemy.currentHealth}');
       enemy.takeDamage(damage);
-      print('Enemy health after Arrow hit: ${enemy.currentHealth}');
+      // Debug: print('Enemy health after Arrow hit: ${enemy.currentHealth}');
     }
   }
 }
@@ -309,7 +303,6 @@ class Cannonball extends Projectile {
 
   @override
   void onHit() {
-    // TODO: Implement splash damage to nearby enemies
     // This will require access to the entity manager
     super.onHit();
   }

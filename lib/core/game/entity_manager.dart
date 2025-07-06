@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../shared/models/entity.dart';
 import '../../shared/models/vector2.dart';
+import '../../features/game/domain/models/particle.dart';
 
 /// Manages all game entities (towers, enemies, projectiles)
 class EntityManager {
   final List<Entity> _entities = [];
   final List<Entity> _entitiesToAdd = [];
   final List<String> _entitiesToRemove = [];
+  final ParticleSystem _particleSystem = ParticleSystem();
 
   /// Get all active entities
   List<Entity> get entities => _entities.where((e) => e.isActive).toList();
@@ -31,8 +33,8 @@ class EntityManager {
     removeEntity(entity.id);
   }
 
-  /// Update all entities
-  void update(double deltaTime) {
+  /// Process entity additions and removals without updating entity logic
+  void processAdditionsAndRemovals() {
     // Process additions
     _entities.addAll(_entitiesToAdd);
     _entitiesToAdd.clear();
@@ -43,6 +45,15 @@ class EntityManager {
     }
     _entitiesToRemove.clear();
 
+    // Remove inactive entities
+    _entities.removeWhere((entity) => !entity.isActive);
+  }
+
+  /// Update all entities
+  void update(double deltaTime) {
+    // Process additions and removals first
+    processAdditionsAndRemovals();
+
     // Update active entities
     for (final entity in _entities) {
       if (entity.isActive) {
@@ -50,19 +61,8 @@ class EntityManager {
       }
     }
 
-    // Remove inactive entities
-    final inactiveEntities = _entities
-        .where((entity) => !entity.isActive)
-        .toList();
-    if (inactiveEntities.isNotEmpty) {
-      print(
-        'EntityManager removing ${inactiveEntities.length} inactive entities',
-      );
-      for (final entity in inactiveEntities) {
-        print('Removing inactive entity: ${entity.runtimeType}');
-      }
-    }
-    _entities.removeWhere((entity) => !entity.isActive);
+    // Update particle system
+    _particleSystem.update(deltaTime);
   }
 
   /// Render all visible entities
@@ -72,6 +72,9 @@ class EntityManager {
         entity.render(canvas, canvasSize);
       }
     }
+
+    // Render particle effects on top
+    _particleSystem.render(canvas, canvasSize);
   }
 
   /// Check collisions between entities
@@ -109,6 +112,19 @@ class EntityManager {
     }).toList();
   }
 
+  /// Add a particle emitter to the system
+  void addParticleEmitter(ParticleEmitter emitter) {
+    _particleSystem.addEmitter(emitter);
+  }
+
+  /// Add a single particle to the system
+  void addParticle(Particle particle) {
+    _particleSystem.addParticle(particle);
+  }
+
+  /// Get particle system for external access
+  ParticleSystem get particleSystem => _particleSystem;
+
   /// Clear all entities
   void clear() {
     for (final entity in _entities) {
@@ -117,6 +133,7 @@ class EntityManager {
     _entities.clear();
     _entitiesToAdd.clear();
     _entitiesToRemove.clear();
+    _particleSystem.clear();
   }
 
   /// Get total entity count

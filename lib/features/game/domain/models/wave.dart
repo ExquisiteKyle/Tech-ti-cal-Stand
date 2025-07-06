@@ -34,7 +34,9 @@ class EnemyWave {
   /// Calculate the total duration of the wave
   static double _calculateTotalDuration(List<EnemySpawn> spawns) {
     if (spawns.isEmpty) return 0.0;
-    return spawns.map((s) => s.spawnTime).reduce(math.max);
+    final maxSpawnTime = spawns.map((s) => s.spawnTime).reduce(math.max);
+    // Add a buffer time after the last enemy spawns to ensure proper wave completion
+    return maxSpawnTime + 1.0; // 1 second buffer after last spawn
   }
 
   /// Get the number of enemies in this wave
@@ -93,6 +95,8 @@ class WaveManager {
   double _currentWaveTime = 0.0;
   bool _isWaveActive = false;
   bool _isWaveComplete = false;
+  bool _allEnemiesSpawned = false;
+  int _totalEnemiesSpawned = 0;
 
   /// Generate waves for the current level
   void generateWaves(int levelNumber, int totalWaves) {
@@ -125,7 +129,7 @@ class WaveManager {
       baseEnemies = 6 + ((waveNumber - 10) ~/ 3);
     }
 
-    print('Generating wave ${waveNumber} with ${baseEnemies} enemies');
+    // Debug: print('Generating wave $waveNumber with $baseEnemies enemies');
 
     // Enemy type probabilities change with wave progression
     final goblinChance = math.max(0.1, 0.8 - (waveNumber * 0.05)).toDouble();
@@ -189,9 +193,11 @@ class WaveManager {
     if (_currentWaveIndex < _waves.length) {
       _isWaveActive = true;
       _isWaveComplete = false;
+      _allEnemiesSpawned = false;
+      _totalEnemiesSpawned = 0;
       _currentWaveTime = 0.0;
-      final wave = _waves[_currentWaveIndex];
-      print('Starting wave ${wave.waveNumber} with ${wave.enemyCount} enemies');
+      // final wave = _waves[_currentWaveIndex];
+      // Debug: print('Starting wave ${wave.waveNumber} with ${wave.enemyCount} enemies');
     }
   }
 
@@ -204,11 +210,9 @@ class WaveManager {
     _currentWaveTime += deltaTime;
     final currentWave = _waves[_currentWaveIndex];
 
-    // Check if wave is complete
-    if (_currentWaveTime >= currentWave.totalDuration + 5.0) {
-      // 5 second buffer
-      _isWaveComplete = true;
-      _isWaveActive = false;
+    // Check if all enemies have been spawned
+    if (_currentWaveTime >= currentWave.totalDuration) {
+      _allEnemiesSpawned = true;
     }
 
     // Get enemies to spawn at current time
@@ -219,6 +223,7 @@ class WaveManager {
       final enemy = _createEnemy(spawn.enemyType, path);
       if (enemy != null) {
         enemiesToSpawn.add(enemy);
+        _totalEnemiesSpawned++;
       }
     }
 
@@ -227,31 +232,47 @@ class WaveManager {
 
   /// Create an enemy of the specified type
   Enemy? _createEnemy(EnemyType type, GamePath path) {
-    final startPosition = path.waypoints.isNotEmpty
+    final startWaypoint = path.waypoints.isNotEmpty
         ? path.waypoints.first.position
         : Vector2.zero();
 
+    // Helper function to center enemy at waypoint
+    Vector2 getCenteredPosition(Vector2 size) =>
+        Vector2(startWaypoint.x - size.x / 2, startWaypoint.y - size.y / 2);
+
     switch (type) {
       case EnemyType.goblin:
+        final goblinSize = Vector2(12, 12);
         return Goblin(
           waypoints: path.positions,
-          position: Vector2(startPosition.x, startPosition.y),
+          position: getCenteredPosition(goblinSize),
         );
       case EnemyType.orc:
+        final orcSize = Vector2(14, 14);
         return Orc(
           waypoints: path.positions,
-          position: Vector2(startPosition.x, startPosition.y),
+          position: getCenteredPosition(orcSize),
         );
       case EnemyType.troll:
+        final trollSize = Vector2(15, 15);
         return Troll(
           waypoints: path.positions,
-          position: Vector2(startPosition.x, startPosition.y),
+          position: getCenteredPosition(trollSize),
         );
       case EnemyType.boss:
+        final bossSize = Vector2(16, 16);
         return Boss(
           waypoints: path.positions,
-          position: Vector2(startPosition.x, startPosition.y),
+          position: getCenteredPosition(bossSize),
         );
+    }
+  }
+
+  /// Mark wave as complete when all enemies are defeated
+  void markWaveComplete() {
+    if (_allEnemiesSpawned) {
+      _isWaveComplete = true;
+      _isWaveActive = false;
     }
   }
 
@@ -262,6 +283,8 @@ class WaveManager {
       _currentWaveTime = 0.0;
       _isWaveActive = false;
       _isWaveComplete = false;
+      _allEnemiesSpawned = false;
+      _totalEnemiesSpawned = 0;
     }
   }
 
@@ -287,6 +310,12 @@ class WaveManager {
 
   /// Check if the current wave is complete
   bool get isWaveComplete => _isWaveComplete;
+
+  /// Check if all enemies in the current wave have been spawned
+  bool get allEnemiesSpawned => _allEnemiesSpawned;
+
+  /// Check if at least one enemy has been spawned in the current wave
+  bool get hasSpawnedAtLeastOneEnemy => _totalEnemiesSpawned > 0;
 
   /// Get the current wave progress (0.0 to 1.0)
   double get currentWaveProgress {
@@ -333,6 +362,8 @@ class WaveManager {
     _currentWaveTime = 0.0;
     _isWaveActive = false;
     _isWaveComplete = false;
+    _allEnemiesSpawned = false;
+    _totalEnemiesSpawned = 0;
   }
 }
 
