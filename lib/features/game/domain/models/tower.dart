@@ -132,8 +132,9 @@ abstract class Tower extends Entity {
       ..color = towerColor
       ..style = PaintingStyle.fill;
 
-    // Draw tower base
-    canvas.drawCircle(Offset(center.x, center.y), size.x / 2, paint);
+    // Draw tower base (slightly larger for upgraded towers)
+    final towerRadius = size.x / 2 + (upgradeLevel * 2);
+    canvas.drawCircle(Offset(center.x, center.y), towerRadius, paint);
 
     // Draw tower border
     final borderPaint = Paint()
@@ -141,7 +142,7 @@ abstract class Tower extends Entity {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
 
-    canvas.drawCircle(Offset(center.x, center.y), size.x / 2, borderPaint);
+    canvas.drawCircle(Offset(center.x, center.y), towerRadius, borderPaint);
 
     // Draw range indicator if selected
     if (currentTarget != null) {
@@ -153,26 +154,99 @@ abstract class Tower extends Entity {
       canvas.drawCircle(Offset(center.x, center.y), range, rangePaint);
     }
 
-    // Draw upgrade level indicators
-    if (upgradeLevel > 0) {
-      for (int i = 0; i < upgradeLevel; i++) {
-        final starPaint = Paint()
-          ..color = Colors.yellow
-          ..style = PaintingStyle.fill;
+    // Draw upgrade path indicator ring first (behind tower)
+    if (upgradeLevel > 0 && selectedUpgradePath != null) {
+      final pathPaint = Paint()
+        ..color = selectedUpgradePath == UpgradePath.path1
+            ? Colors.blue.withValues(alpha: 0.6)
+            : Colors.purple.withValues(alpha: 0.6)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
 
-        final starRadius = 3.0;
-        final starX = center.x - (upgradeLevel - 1) * 8 / 2 + i * 8;
-        final starY = center.y - size.y / 2 - 10;
-
-        canvas.drawCircle(Offset(starX, starY), starRadius, starPaint);
-      }
+      // Draw a small indicator ring around the tower
+      canvas.drawCircle(Offset(center.x, center.y), towerRadius + 2, pathPaint);
     }
+
+    // Draw upgrade badge on top of tower (always last)
+    _drawUpgradeBadge(canvas);
+  }
+
+  /// Draw upgrade level number badge on top of tower
+  void _drawUpgradeBadge(Canvas canvas) {
+    if (upgradeLevel <= 0) return;
+
+    final towerRadius = size.x / 2 + (upgradeLevel * 2);
+
+    // Draw upgrade level number in a circle
+    final levelBgPaint = Paint()
+      ..color = selectedUpgradePath == UpgradePath.path1
+          ? Colors.blue.withValues(alpha: 0.95)
+          : (selectedUpgradePath == UpgradePath.path2
+                ? Colors.purple.withValues(alpha: 0.95)
+                : Colors.green.withValues(alpha: 0.95))
+      ..style = PaintingStyle.fill;
+
+    final levelBorderPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    // Draw level number circle at bottom-right of tower
+    final levelCircleRadius = 10.0;
+    final levelCircleX = center.x + towerRadius - 4;
+    final levelCircleY = center.y + towerRadius - 4;
+
+    // Background circle with subtle glow
+    final glowPaint = Paint()
+      ..color = levelBgPaint.color.withValues(alpha: 0.3)
+      ..style = PaintingStyle.fill;
+
+    // Draw glow effect
+    canvas.drawCircle(
+      Offset(levelCircleX, levelCircleY),
+      levelCircleRadius + 3,
+      glowPaint,
+    );
+
+    // Draw main background circle
+    canvas.drawCircle(
+      Offset(levelCircleX, levelCircleY),
+      levelCircleRadius,
+      levelBgPaint,
+    );
+    canvas.drawCircle(
+      Offset(levelCircleX, levelCircleY),
+      levelCircleRadius,
+      levelBorderPaint,
+    );
+
+    // Draw level number
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: upgradeLevel.toString(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          shadows: [
+            Shadow(color: Colors.black, offset: Offset(1, 1), blurRadius: 2),
+          ],
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+
+    final textX = levelCircleX - textPainter.width / 2;
+    final textY = levelCircleY - textPainter.height / 2;
+    textPainter.paint(canvas, Offset(textX, textY));
   }
 
   /// Render tower with selection indicator
   void renderWithSelection(Canvas canvas, Size canvasSize, bool isSelected) {
     // Draw selection indicator first (so it's behind the tower)
     if (isSelected) {
+      final towerRadius = size.x / 2 + (upgradeLevel * 2);
       final selectionPaint = Paint()
         ..color = Colors.lightBlue.withAlpha(150)
         ..style = PaintingStyle.stroke
@@ -180,7 +254,7 @@ abstract class Tower extends Entity {
 
       canvas.drawCircle(
         Offset(center.x, center.y),
-        size.x / 2 + 8,
+        towerRadius + 8,
         selectionPaint,
       );
 
@@ -195,6 +269,9 @@ abstract class Tower extends Entity {
 
     // Render normal tower
     render(canvas, canvasSize);
+
+    // Draw upgrade badge on top of tower
+    _drawUpgradeBadge(canvas);
   }
 }
 

@@ -5,6 +5,7 @@ import 'entity_manager.dart';
 import '../rendering/game_canvas.dart';
 import '../widgets/mmorpg_player_ui.dart';
 import '../widgets/game_over_dialog.dart';
+import '../widgets/tower_upgrade_dialog.dart';
 import '../../features/game/presentation/providers/game_state_provider.dart';
 import '../../features/game/presentation/providers/tower_selection_provider.dart';
 import '../../features/game/domain/models/game_state.dart';
@@ -448,7 +449,20 @@ class _GameEngineState extends ConsumerState<GameEngine> {
     }
 
     final gameState = ref.watch(gameStateProvider);
+    final towerSelection = ref.watch(towerSelectionProvider);
     _updatePathIfNeeded(screenSize);
+
+    // Listen for tower selection changes and show upgrade dialog
+    ref.listen(towerSelectionProvider, (previous, current) {
+      if (current.hasTowerSelected) {
+        // Show upgrade dialog when any tower is selected (including re-selection)
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            TowerUpgradeDialog.show(context, current.selectedTower!);
+          }
+        });
+      }
+    });
 
     // Start wave when transitioning from preparing to playing
     if (gameState.isPlaying && !_waveManager.isWaveActive) {
@@ -636,14 +650,8 @@ class _GameEngineState extends ConsumerState<GameEngine> {
                         // Minimal gap between tower shop and controls
                         const SizedBox(height: 2),
 
-                        // Middle row: Tower upgrade panel (if tower selected)
-                        if (!isSmallScreen) ...[
-                          SizedBox(
-                            height: 32,
-                            child: _buildTowerUpgradePanel(),
-                          ),
-                          const SizedBox(height: 2),
-                        ],
+                        // Tower upgrade panel is now a popup dialog
+                        // No inline panel needed
                       ],
                     ),
 
@@ -692,66 +700,8 @@ class _GameEngineState extends ConsumerState<GameEngine> {
     );
   }
 
-  Widget _buildTowerUpgradePanel() {
-    final towerSelection = ref.watch(towerSelectionProvider);
-
-    if (!towerSelection.hasTowerSelected) {
-      return Container(); // No tower selected
-    }
-
-    final selectedTower = towerSelection.selectedTower!;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0E6FF).withAlpha(200),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFD4C5E8), width: 1),
-      ),
-      child: Row(
-        children: [
-          // Tower info (compact)
-          Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: selectedTower.towerColor,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.black, width: 1),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '${selectedTower.name} (Lv.${selectedTower.upgradeLevel}) - DMG: ${selectedTower.damage.toInt()}, RNG: ${selectedTower.range.toInt()}',
-              style: const TextStyle(
-                color: Color(0xFF4A4A4A),
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Close button
-          GestureDetector(
-            onTap: () {
-              ref.read(towerSelectionProvider.notifier).clearSelection();
-            },
-            child: Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.close, color: Colors.red, size: 14),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Tower upgrade panel is now handled by popup dialog
+  // This method is no longer needed but kept for compatibility
 
   Widget _buildTowerSelection() {
     final gameState = ref.watch(gameStateProvider);

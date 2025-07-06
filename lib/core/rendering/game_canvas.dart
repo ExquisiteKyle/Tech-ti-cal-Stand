@@ -36,6 +36,11 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
   late WaveManager _waveManager;
   late GamePath _currentPath;
   Vector2? _towerPreviewPosition;
+  DateTime? _lastTowerClickTime;
+  Tower? _clickedTower;
+  DateTime? _clickFeedbackTime;
+  static const Duration _clickThrottleDuration = Duration(milliseconds: 300);
+  static const Duration _clickFeedbackDuration = Duration(milliseconds: 200);
 
   @override
   void initState() {
@@ -216,8 +221,33 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
       // Check if clicking on existing tower
       final clickedTower = _getTowerAtPosition(position);
       if (clickedTower != null) {
-        // Select tower for upgrade
-        towerSelectionNotifier.selectExistingTower(clickedTower);
+        // Throttle tower clicks to prevent accidental double-clicks
+        final now = DateTime.now();
+        if (_lastTowerClickTime == null ||
+            now.difference(_lastTowerClickTime!) > _clickThrottleDuration) {
+          _lastTowerClickTime = now;
+
+          // Show visual feedback
+          setState(() {
+            _clickedTower = clickedTower;
+            _clickFeedbackTime = now;
+          });
+
+          // Select tower for upgrade
+          towerSelectionNotifier.selectExistingTower(clickedTower);
+
+          // Brief pause to make interaction feel more responsive
+          Future.delayed(const Duration(milliseconds: 50), () {
+            if (mounted) {
+              setState(() {
+                // This small setState helps ensure the UI updates immediately
+              });
+            }
+          });
+
+          // Add haptic feedback for better user experience
+          // HapticFeedback.lightImpact(); // Uncomment if you want haptic feedback
+        }
       } else {
         // Only clear selection and call onTap if we're not in tower selection mode
         if (towerSelection.selectedTowerType == null) {
@@ -368,14 +398,43 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
   }
 
   /// Find tower at given position (for tower selection)
+  /// Uses enlarged hit area for easier clicking during active gameplay
   Tower? _getTowerAtPosition(Vector2 position) {
     final towers = widget.entityManager.getEntitiesOfType<Tower>();
+
+    // Use a larger hit area for easier tower selection
+    const double hitAreaExpansion = 20.0; // Extra pixels around tower
+
+    // First pass: Check exact tower bounds for precise selection
     for (final tower in towers) {
       if (tower.containsPoint(position)) {
         return tower;
       }
     }
+
+    // Second pass: Check expanded bounds for easier selection
+    for (final tower in towers) {
+      // Create expanded hit area
+      final expandedBounds = Rect.fromLTWH(
+        tower.position.x - hitAreaExpansion,
+        tower.position.y - hitAreaExpansion,
+        tower.size.x + (hitAreaExpansion * 2),
+        tower.size.y + (hitAreaExpansion * 2),
+      );
+
+      if (expandedBounds.contains(Offset(position.x, position.y))) {
+        return tower;
+      }
+    }
     return null;
+  }
+
+  /// Check if we should show click feedback
+  bool _shouldShowClickFeedback() {
+    if (_clickFeedbackTime == null || _clickedTower == null) return false;
+
+    final now = DateTime.now();
+    return now.difference(_clickFeedbackTime!) < _clickFeedbackDuration;
   }
 
   @override
