@@ -274,7 +274,6 @@ class ParticleSystem {
 
   // Performance optimization: limit total particles
   static const int _maxParticles = 200;
-  static const int _maxEmitters = 20;
 
   void update(double deltaTime) {
     // Update existing particles
@@ -285,8 +284,9 @@ class ParticleSystem {
 
     // Update emitters and create new particles (with limits)
     for (final emitter in _emitters) {
-      if (_particles.length >= _maxParticles)
+      if (_particles.length >= _maxParticles) {
         break; // Stop creating particles if at limit
+      }
 
       final newParticles = emitter.emit(deltaTime);
       _particles.addAll(newParticles);

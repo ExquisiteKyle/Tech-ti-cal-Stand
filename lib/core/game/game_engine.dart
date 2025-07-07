@@ -21,7 +21,6 @@ import '../../features/game/domain/models/wave.dart';
 import '../../features/game/domain/models/tile_system.dart';
 import '../../features/game/domain/models/level.dart';
 import '../../features/game/domain/models/level_manager.dart';
-import '../../features/game/domain/models/projectile.dart';
 import '../../shared/models/vector2.dart';
 import '../../shared/models/entity.dart';
 

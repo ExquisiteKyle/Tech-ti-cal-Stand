@@ -2,17 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:techtical_stand/main.dart';
-import 'package:techtical_stand/features/game/presentation/screens/main_menu_screen.dart';
 import 'package:techtical_stand/features/game/presentation/screens/level_selection_screen.dart';
 import 'package:techtical_stand/features/game/presentation/screens/achievements_screen.dart';
 import 'package:techtical_stand/features/game/presentation/screens/settings_screen.dart';
 import 'package:techtical_stand/core/widgets/tutorial_overlay.dart';
-import 'package:techtical_stand/core/audio/audio_manager.dart';
-import 'package:techtical_stand/features/game/domain/models/level.dart';
-import 'package:techtical_stand/features/game/presentation/providers/level_provider.dart';
-import 'package:techtical_stand/features/game/domain/models/achievement.dart';
-import 'package:techtical_stand/features/game/domain/models/achievement_manager.dart';
-import 'package:techtical_stand/features/game/presentation/providers/achievement_provider.dart';
 
 // Helper to robustly wait for a widget to appear
 Future<void> waitForWidget(
@@ -274,8 +267,8 @@ void main() {
         WidgetTester tester,
       ) async {
         // Test with small screen
-        tester.binding.window.physicalSizeTestValue = const Size(400, 600);
-        tester.binding.window.devicePixelRatioTestValue = 1.0;
+        tester.view.physicalSize = const Size(400, 600);
+        tester.view.devicePixelRatio = 1.0;
 
         await tester.pumpWidget(
           const ProviderScope(child: TechticalStandApp()),
@@ -287,14 +280,16 @@ void main() {
         expect(find.text('Quick Play'), findsOneWidget);
 
         // Reset screen size
-        tester.binding.window.clearPhysicalSizeTestValue();
-        tester.binding.window.clearDevicePixelRatioTestValue();
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
       });
 
       testWidgets('UI works with large screen', (WidgetTester tester) async {
         // Test with large screen
-        tester.binding.window.physicalSizeTestValue = const Size(1200, 800);
-        tester.binding.window.devicePixelRatioTestValue = 1.0;
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
 
         await tester.pumpWidget(
           const ProviderScope(child: TechticalStandApp()),
@@ -306,8 +301,10 @@ void main() {
         expect(find.text('Quick Play'), findsOneWidget);
 
         // Reset screen size
-        tester.binding.window.clearPhysicalSizeTestValue();
-        tester.binding.window.clearDevicePixelRatioTestValue();
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
       });
     });
 

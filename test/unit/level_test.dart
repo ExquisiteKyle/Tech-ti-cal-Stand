@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:techtical_stand/features/game/domain/models/level.dart';
-import 'package:techtical_stand/features/game/domain/models/level_manager.dart';
 
 void main() {
   group('Level Tests', () {

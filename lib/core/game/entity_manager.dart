@@ -36,20 +36,17 @@ class EntityManager {
 
   /// Get entities of a specific type (with caching)
   List<T> getEntitiesOfType<T extends Entity>() {
+    // Update cache if needed
+    _updateCache();
+
     // Use cached lists for common types to avoid repeated filtering
-    if (T == Tower &&
-        _cachedTowers != null &&
-        _lastCacheFrame == _collisionFrame) {
+    if (T == Tower && _cachedTowers != null) {
       return _cachedTowers!.cast<T>();
     }
-    if (T == Enemy &&
-        _cachedEnemies != null &&
-        _lastCacheFrame == _collisionFrame) {
+    if (T == Enemy && _cachedEnemies != null) {
       return _cachedEnemies!.cast<T>();
     }
-    if (T == Projectile &&
-        _cachedProjectiles != null &&
-        _lastCacheFrame == _collisionFrame) {
+    if (T == Projectile && _cachedProjectiles != null) {
       return _cachedProjectiles!.cast<T>();
     }
 

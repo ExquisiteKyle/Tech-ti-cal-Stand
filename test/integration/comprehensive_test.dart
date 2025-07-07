@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:techtical_stand/main.dart';
-import 'package:techtical_stand/features/game/presentation/screens/main_menu_screen.dart';
 import 'package:techtical_stand/features/game/presentation/screens/settings_screen.dart';
 import 'package:techtical_stand/core/widgets/tutorial_overlay.dart';
 import 'package:techtical_stand/core/theme/accessibility_colors.dart';

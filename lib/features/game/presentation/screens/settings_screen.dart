@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/accessibility_colors.dart';
 import '../../../../core/audio/audio_manager.dart';
 import '../../../../core/widgets/audio_settings_panel.dart';
 
@@ -25,7 +24,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   bool _showDamageNumbers = true;
   bool _showParticleEffects = true;
   bool _enableHapticFeedback = true;
-  bool _enableColorBlindMode = false;
   String _colorBlindType = 'normal';
   bool _highContrast = false;
   double _textScaleFactor = 1.0;
@@ -722,7 +720,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
       _showDamageNumbers = true;
       _showParticleEffects = true;
       _enableHapticFeedback = true;
-      _enableColorBlindMode = false;
       _textScaleFactor = 1.0;
       _autoSave = true;
       _showTutorials = true;

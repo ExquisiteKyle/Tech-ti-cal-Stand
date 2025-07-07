@@ -35,7 +35,7 @@ class PerformanceMonitor extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: AppColors.hudBackground.withOpacity(0.8),
+              color: AppColors.hudBackground.withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(4),
               border: Border.all(color: AppColors.hudBorder),
             ),

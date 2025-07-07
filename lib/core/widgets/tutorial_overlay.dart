@@ -380,9 +380,6 @@ class TutorialManager {
 
   TutorialManager._();
 
-  static const String _tutorialCompletedKey = 'tutorial_completed';
-  static const String _tutorialStepKey = 'tutorial_step';
-
   bool _isTutorialCompleted = false;
   int _currentTutorialStep = 0;
 

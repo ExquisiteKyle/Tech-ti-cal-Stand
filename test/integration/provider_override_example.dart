@@ -137,7 +137,7 @@ void main() {
       final overrides = [
         levelsProvider.overrideWithValue(mockLevels),
         achievementsProvider.overrideWith((ref) async => mockAchievements),
-        initializeLevelManagerProvider.overrideWith((ref) async => null),
+        initializeLevelManagerProvider.overrideWith((ref) async {}),
         achievementManagerProvider.overrideWithValue(
           AchievementManager.instance,
         ),
@@ -176,7 +176,7 @@ void main() {
             ),
           ];
         }),
-        initializeLevelManagerProvider.overrideWith((ref) async => null),
+        initializeLevelManagerProvider.overrideWith((ref) async {}),
       ];
 
       await tester.pumpWidget(

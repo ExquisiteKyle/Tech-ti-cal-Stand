@@ -11,35 +11,36 @@ void main() {
   );
 
   // Set up shared preferences mocking
-  void _setupSharedPreferencesMocks() {
-    sharedPreferencesChannel.setMockMethodCallHandler((
-      MethodCall methodCall,
-    ) async {
-      switch (methodCall.method) {
-        case 'getAll':
-          return <String, dynamic>{};
-        case 'setString':
-        case 'setDouble':
-        case 'setBool':
-        case 'setInt':
-          return true;
-        case 'getString':
-        case 'getDouble':
-        case 'getBool':
-        case 'getInt':
-          return null;
-        case 'remove':
-        case 'clear':
-          return true;
-        default:
-          return null;
-      }
-    });
+  void setupSharedPreferencesMocks() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(sharedPreferencesChannel, (
+          MethodCall methodCall,
+        ) async {
+          switch (methodCall.method) {
+            case 'getAll':
+              return <String, dynamic>{};
+            case 'setString':
+            case 'setDouble':
+            case 'setBool':
+            case 'setInt':
+              return true;
+            case 'getString':
+            case 'getDouble':
+            case 'getBool':
+            case 'getInt':
+              return null;
+            case 'remove':
+            case 'clear':
+              return true;
+            default:
+              return null;
+          }
+        });
   }
 
   setUpAll(() {
     // Set up shared preferences mocking
-    _setupSharedPreferencesMocks();
+    setupSharedPreferencesMocks();
   });
 
   setUp(() {
@@ -48,7 +49,8 @@ void main() {
 
   tearDown(() {
     // Clean up mocks after each test
-    sharedPreferencesChannel.setMockMethodCallHandler(null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(sharedPreferencesChannel, null);
   });
 
   group('Audio Manager Tests', () {
