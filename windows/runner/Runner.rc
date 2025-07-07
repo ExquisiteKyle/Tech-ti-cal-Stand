@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "flutter_defense" "\0"
+            VALUE "FileDescription", "techtical_stand" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "flutter_defense" "\0"
+            VALUE "InternalName", "techtical_stand" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "flutter_defense.exe" "\0"
-            VALUE "ProductName", "flutter_defense" "\0"
+            VALUE "OriginalFilename", "techtical_stand.exe" "\0"
+            VALUE "ProductName", "techtical_stand" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
