@@ -80,54 +80,50 @@ class Particle extends Entity {
       ..color = color.withValues(alpha: alpha)
       ..style = PaintingStyle.fill;
 
+    // Performance optimization: Simplified rendering for most particle types
     switch (type) {
       case ParticleType.explosion:
       case ParticleType.fire:
-        // Draw as circle with gradient effect
+      case ParticleType.smoke:
+      case ParticleType.trail:
+      case ParticleType.blood:
+        // Draw as simple circle (fastest rendering)
         canvas.drawCircle(Offset(position.x, position.y), currentSize, paint);
         break;
 
       case ParticleType.sparkle:
       case ParticleType.magic:
-        // Draw as star shape
-        _drawStar(canvas, paint);
-        break;
-
-      case ParticleType.smoke:
-        // Draw as soft circle
-        paint.style = PaintingStyle.fill;
-        canvas.drawCircle(Offset(position.x, position.y), currentSize, paint);
-        break;
-
-      case ParticleType.trail:
-        // Draw as small circle trail
-        canvas.drawCircle(
-          Offset(position.x, position.y),
-          currentSize * 0.5,
-          paint,
-        );
-        break;
-
-      case ParticleType.blood:
-        // Draw as small splatter
-        paint.style = PaintingStyle.fill;
-        canvas.drawCircle(
-          Offset(position.x, position.y),
-          currentSize * 0.8,
-          paint,
-        );
+        // Only draw complex shapes for important effects
+        if (currentSize > 4.0) {
+          // Only draw stars for larger particles
+          _drawStar(canvas, paint);
+        } else {
+          // Fallback to simple circle for small particles
+          canvas.drawCircle(Offset(position.x, position.y), currentSize, paint);
+        }
         break;
 
       case ParticleType.ice:
-        // Draw as crystalline shape
+        // Simplified ice rendering
         paint.style = PaintingStyle.stroke;
-        paint.strokeWidth = 2.0;
+        paint.strokeWidth = 1.0; // Reduced stroke width
         canvas.drawCircle(Offset(position.x, position.y), currentSize, paint);
         break;
 
       case ParticleType.electric:
-        // Draw as jagged line
-        _drawElectric(canvas, paint);
+        // Only draw electric effects for large particles
+        if (currentSize > 6.0) {
+          _drawElectric(canvas, paint);
+        } else {
+          // Fallback to simple line
+          paint.style = PaintingStyle.stroke;
+          paint.strokeWidth = 1.0;
+          canvas.drawLine(
+            Offset(position.x, position.y),
+            Offset(position.x + 4, position.y + 4),
+            paint,
+          );
+        }
         break;
     }
   }
@@ -224,11 +220,18 @@ class ParticleEmitter {
     return [];
   }
 
+  // Performance optimization: reduced particle count for common effects
   List<Particle> _createParticles() {
     final particles = <Particle>[];
     final random = math.Random();
 
-    for (int i = 0; i < particleCount; i++) {
+    // Performance optimization: reduce particle count for better performance
+    final actualParticleCount = math.min(
+      particleCount,
+      8,
+    ); // Cap at 8 particles max
+
+    for (int i = 0; i < actualParticleCount; i++) {
       final angle = random.nextDouble() * spreadAngle - spreadAngle / 2;
       final speed = minSpeed + random.nextDouble() * (maxSpeed - minSpeed);
       final lifetime =
@@ -269,6 +272,10 @@ class ParticleSystem {
   final List<Particle> _particles = [];
   final List<ParticleEmitter> _emitters = [];
 
+  // Performance optimization: limit total particles
+  static const int _maxParticles = 200;
+  static const int _maxEmitters = 20;
+
   void update(double deltaTime) {
     // Update existing particles
     _particles.removeWhere((particle) => !particle.isActive);
@@ -276,14 +283,23 @@ class ParticleSystem {
       particle.update(deltaTime);
     }
 
-    // Update emitters and create new particles
+    // Update emitters and create new particles (with limits)
     for (final emitter in _emitters) {
+      if (_particles.length >= _maxParticles)
+        break; // Stop creating particles if at limit
+
       final newParticles = emitter.emit(deltaTime);
       _particles.addAll(newParticles);
     }
 
     // Remove inactive emitters
     _emitters.removeWhere((emitter) => !emitter.isActive);
+
+    // Performance optimization: limit particle count by removing oldest particles
+    if (_particles.length > _maxParticles) {
+      _particles.sort((a, b) => a.currentLifetime.compareTo(b.currentLifetime));
+      _particles.removeRange(_maxParticles, _particles.length);
+    }
   }
 
   void render(Canvas canvas, Size canvasSize) {

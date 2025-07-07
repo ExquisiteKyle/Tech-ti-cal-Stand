@@ -6,6 +6,8 @@ import '../../../../core/game/game_engine.dart';
 import '../providers/level_provider.dart';
 import 'level_selection_screen.dart';
 import 'achievements_screen.dart';
+import 'settings_screen.dart';
+import '../../../../core/widgets/tutorial_overlay.dart';
 
 /// Main menu screen with beautiful UI and navigation options
 class MainMenuScreen extends ConsumerStatefulWidget {
@@ -223,6 +225,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
     return Column(
       children: [
         _buildMenuButton(
+          key: const Key('mainMenu_quickPlay'),
           title: 'Quick Play',
           subtitle: 'Start first level',
           icon: Icons.play_arrow,
@@ -231,6 +234,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
         ),
         const SizedBox(height: 16),
         _buildMenuButton(
+          key: const Key('mainMenu_levelSelect'),
           title: 'Level Select',
           subtitle: 'Choose your challenge',
           icon: Icons.map,
@@ -238,6 +242,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
         ),
         const SizedBox(height: 16),
         _buildMenuButton(
+          key: const Key('mainMenu_achievements'),
           title: 'Achievements',
           subtitle: 'View your accomplishments',
           icon: Icons.emoji_events,
@@ -245,6 +250,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
         ),
         const SizedBox(height: 16),
         _buildMenuButton(
+          key: const Key('mainMenu_statistics'),
           title: 'Statistics',
           subtitle: 'View your progress',
           icon: Icons.analytics,
@@ -252,6 +258,15 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
         ),
         const SizedBox(height: 16),
         _buildMenuButton(
+          key: const Key('mainMenu_tutorial'),
+          title: 'Tutorial',
+          subtitle: 'Learn the basics',
+          icon: Icons.school,
+          onTap: _showTutorial,
+        ),
+        const SizedBox(height: 16),
+        _buildMenuButton(
+          key: const Key('mainMenu_settings'),
           title: 'Settings',
           subtitle: 'Audio and preferences',
           icon: Icons.settings,
@@ -262,105 +277,112 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
   }
 
   Widget _buildMenuButton({
+    required Key key,
     required String title,
     required String subtitle,
     required IconData icon,
     required VoidCallback onTap,
     bool isPrimary = false,
   }) {
-    return InkWell(
-      onTap: () {
-        AudioManager().playSfx(AudioEvent.buttonClick);
-        onTap();
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isPrimary
-                ? [
-                    AppColors.secondary,
-                    AppColors.secondary.withValues(alpha: 0.8),
-                  ]
-                : [
-                    Colors.white.withValues(alpha: 0.9),
-                    Colors.white.withValues(alpha: 0.7),
-                  ],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: isPrimary
-                  ? AppColors.secondary.withValues(alpha: 0.3)
-                  : Colors.black.withValues(alpha: 0.1),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        key: key,
+        onTap: () {
+          AudioManager().playSfx(AudioEvent.buttonClick);
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isPrimary
+                  ? [
+                      AppColors.secondary,
+                      AppColors.secondary.withValues(alpha: 0.8),
+                    ]
+                  : [
+                      Colors.white.withValues(alpha: 0.9),
+                      Colors.white.withValues(alpha: 0.7),
+                    ],
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
                 color: isPrimary
-                    ? AppColors.buttonPrimary.withValues(alpha: 0.9)
-                    : AppColors.cardBackground,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
+                    ? AppColors.secondary.withValues(alpha: 0.3)
+                    : Colors.black.withValues(alpha: 0.1),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
                   color: isPrimary
-                      ? AppColors.textAccent.withValues(alpha: 0.3)
-                      : AppColors.cardBorder,
-                  width: 1.5,
+                      ? AppColors.buttonPrimary.withValues(alpha: 0.9)
+                      : AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isPrimary
+                        ? AppColors.textAccent.withValues(alpha: 0.3)
+                        : AppColors.cardBorder,
+                    width: 1.5,
+                  ),
+                ),
+                child: Icon(
+                  icon,
+                  size: 32,
+                  color: isPrimary
+                      ? AppColors.textAccent
+                      : AppColors.textOnPastel,
                 ),
               ),
-              child: Icon(
-                icon,
-                size: 32,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isPrimary
+                            ? AppColors.textAccent
+                            : AppColors.textOnPastel,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isPrimary
+                            ? AppColors.textAccent.withValues(alpha: 0.8)
+                            : AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
                 color: isPrimary
                     ? AppColors.textAccent
-                    : AppColors.textOnPastel,
+                    : AppColors.textSecondary,
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: isPrimary
-                          ? AppColors.textAccent
-                          : AppColors.textOnPastel,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isPrimary
-                          ? AppColors.textAccent.withValues(alpha: 0.8)
-                          : AppColors.textSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: isPrimary ? AppColors.textAccent : AppColors.textSecondary,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -426,10 +448,24 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
   }
 
   void _showSettings() {
-    // TODO: Implement settings dialog
-    ScaffoldMessenger.of(
+    Navigator.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Settings coming soon!')));
+    ).push(MaterialPageRoute(builder: (context) => const SettingsScreen()));
+  }
+
+  void _showTutorial() {
+    final tutorialSteps = TutorialManager.instance.getMainGameTutorial();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => TutorialOverlay(
+        steps: tutorialSteps,
+        onComplete: () {
+          Navigator.of(context).pop();
+          TutorialManager.instance.completeTutorial();
+        },
+      ),
+    );
   }
 }
 

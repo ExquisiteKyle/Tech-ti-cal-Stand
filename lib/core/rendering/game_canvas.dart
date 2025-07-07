@@ -930,5 +930,14 @@ class GameCanvasPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) => true;
+  bool shouldRepaint(CustomPainter oldDelegate) {
+    // Only repaint if entities have actually changed
+    // This reduces unnecessary repaints and improves performance
+    final shouldRepaint = entityManager.hasChanged;
+    if (shouldRepaint) {
+      // Reset the change flag after determining we need to repaint
+      entityManager.resetChangeFlag();
+    }
+    return shouldRepaint;
+  }
 }

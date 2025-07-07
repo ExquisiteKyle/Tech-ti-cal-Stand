@@ -347,6 +347,9 @@ class AudioManager {
   /// Check if music is muted
   bool get isMusicMuted => _isMusicMuted;
 
+  /// Check if audio manager is initialized
+  bool get isInitialized => _isInitialized;
+
   /// Load audio settings from SharedPreferences
   Future<void> _loadAudioSettings() async {
     try {

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/constants/app_constants.dart';
 import 'core/theme/app_colors.dart';
 import 'core/audio/audio_manager.dart';
+import 'core/widgets/tutorial_overlay.dart';
+import 'core/theme/accessibility_colors.dart';
 import 'features/game/domain/models/achievement_manager.dart';
 import 'features/game/presentation/screens/main_menu_screen.dart';
 
@@ -14,6 +16,12 @@ void main() async {
 
   // Initialize achievement manager
   await AchievementManager.instance.initialize();
+
+  // Initialize tutorial manager
+  await TutorialManager.instance.initialize();
+
+  // Initialize accessibility settings
+  await AccessibilitySettings.instance.loadSettings();
 
   runApp(const ProviderScope(child: TechticalStandApp()));
 }

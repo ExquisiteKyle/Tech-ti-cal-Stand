@@ -8,6 +8,7 @@ import '../widgets/mmorpg_player_ui.dart';
 import '../widgets/game_over_dialog.dart';
 import '../widgets/tower_upgrade_dialog.dart';
 import '../widgets/audio_settings_panel.dart';
+import '../widgets/performance_monitor.dart';
 import '../audio/audio_manager.dart';
 import '../../features/game/presentation/providers/game_state_provider.dart';
 import '../../features/game/presentation/providers/tower_selection_provider.dart';
@@ -20,6 +21,7 @@ import '../../features/game/domain/models/wave.dart';
 import '../../features/game/domain/models/tile_system.dart';
 import '../../features/game/domain/models/level.dart';
 import '../../features/game/domain/models/level_manager.dart';
+import '../../features/game/domain/models/projectile.dart';
 import '../../shared/models/vector2.dart';
 import '../../shared/models/entity.dart';
 
@@ -322,7 +324,8 @@ class _GameEngineState extends ConsumerState<GameEngine> {
     final gameState = ref.read(gameStateProvider);
     final gameStateNotifier = ref.read(gameStateProvider.notifier);
 
-    final deltaTime = 1.0 / 60.0; // 60 FPS target
+    // Use actual frame time from game loop for smooth 60 FPS
+    final deltaTime = _gameLoop.frameTime;
 
     // Always update entity manager for additions/removals (towers placed during prep)
     // but only update entity logic when game is playing
@@ -336,7 +339,7 @@ class _GameEngineState extends ConsumerState<GameEngine> {
     // Don't update game logic if game is paused or not playing
     if (gameState.isPaused || !gameState.isPlaying) return;
 
-    // Update wave and spawn enemies
+    // Update wave and spawn enemies (optimized)
     final newEnemies = _waveManager.updateWave(deltaTime, _currentPath);
     if (newEnemies.isNotEmpty) {
       // Debug: print('Wave ${_waveManager.currentWaveNumber}: Spawning ${newEnemies.length} enemies');
@@ -352,40 +355,45 @@ class _GameEngineState extends ConsumerState<GameEngine> {
       _entityManager.addEntity(enemy);
     }
 
-    // Update tower targeting and attacks
-    final towers = _entityManager.getEntitiesOfType<Tower>();
+    // Update tower targeting and attacks (optimized with reduced frequency)
     final enemies = _entityManager.getEntitiesOfType<Enemy>();
 
-    if (towers.isNotEmpty && enemies.isNotEmpty) {
-      // Debug: print('Game Engine: ${towers.length} towers, ${enemies.length} enemies');
-    }
+    if (_gameLoop.frameCount % 2 == 0) {
+      // Only update targeting every other frame
+      final towers = _entityManager.getEntitiesOfType<Tower>();
 
-    for (final tower in towers) {
-      // Ensure tower has projectile callback set (safety check)
-      tower.onProjectileCreated ??= (projectile) {
-        // Set up particle emitter callback for projectile effects
-        projectile.onParticleEmitterCreated = (emitter) {
-          _entityManager.addParticleEmitter(emitter);
-        };
-        _entityManager.addEntity(projectile);
-      };
+      if (towers.isNotEmpty && enemies.isNotEmpty) {
+        // Optimized tower targeting - process in batches
+        final currentTime = DateTime.now().millisecondsSinceEpoch / 1000.0;
 
-      // Ensure tower has particle emitter callback set (safety check)
-      tower.onParticleEmitterCreated ??= (emitter) {
-        _entityManager.addParticleEmitter(emitter);
-      };
+        for (final tower in towers) {
+          // Ensure tower has projectile callback set (safety check)
+          tower.onProjectileCreated ??= (projectile) {
+            // Set up particle emitter callback for projectile effects
+            projectile.onParticleEmitterCreated = (emitter) {
+              _entityManager.addParticleEmitter(emitter);
+            };
+            _entityManager.addEntity(projectile);
+          };
 
-      final target = tower.findTarget(enemies.cast<Entity>());
-      if (target != null) {
-        // Debug: print('Tower ${tower.name} found target at distance ${tower.distanceTo(target)}');
-        tower.attack(target, DateTime.now().millisecondsSinceEpoch / 1000.0);
+          // Ensure tower has particle emitter callback set (safety check)
+          tower.onParticleEmitterCreated ??= (emitter) {
+            _entityManager.addParticleEmitter(emitter);
+          };
+
+          final target = tower.findTarget(enemies.cast<Entity>());
+          if (target != null && tower.canAttack(currentTime)) {
+            // Debug: print('Tower ${tower.name} found target at distance ${tower.distanceTo(target)}');
+            tower.attack(target, currentTime);
+          }
+        }
       }
     }
 
     // Update all entities
     _entityManager.update(deltaTime);
 
-    // Check collisions
+    // Check collisions (optimized)
     _entityManager.checkCollisions();
 
     // Check for enemies that reached the end
@@ -449,8 +457,9 @@ class _GameEngineState extends ConsumerState<GameEngine> {
       }
     }
 
-    // Update UI
-    if (mounted) {
+    // Update UI less frequently to maintain 60 FPS
+    // Only update UI every 3 frames (20 FPS UI updates) to reduce overhead
+    if (mounted && _gameLoop.frameCount % 3 == 0) {
       setState(() {});
     }
   }
@@ -730,6 +739,9 @@ class _GameEngineState extends ConsumerState<GameEngine> {
 
             // Preparation Phase Overlay
             _buildPreparationOverlay(gameState, screenSize),
+
+            // Performance Monitor (debug)
+            PerformanceMonitor(gameLoop: _gameLoop),
 
             // Game Over Dialog
             if (gameState.isGameOver)

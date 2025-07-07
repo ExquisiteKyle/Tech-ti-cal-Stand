@@ -7,6 +7,13 @@ class GameLoop {
   bool _isPaused = false;
   late Ticker _ticker;
 
+  // Performance tracking
+  double _lastFrameTime = 0.0;
+  double _frameTime = 1.0 / 60.0; // Default to 60 FPS
+  int _frameCount = 0;
+  double _fps = 60.0;
+  double _lastFpsUpdate = 0.0;
+
   // Game loop callbacks
   VoidCallback? onUpdate;
   VoidCallback? onRender;
@@ -20,6 +27,7 @@ class GameLoop {
     if (!_isRunning) {
       _isRunning = true;
       _isPaused = false;
+      _lastFrameTime = DateTime.now().millisecondsSinceEpoch / 1000.0;
       _ticker.start();
     }
   }
@@ -50,7 +58,25 @@ class GameLoop {
   void _onTick(Duration elapsed) {
     if (!_isRunning || _isPaused) return;
 
-    // Update game logic
+    // Calculate actual frame time for smooth 60 FPS
+    final currentTime = DateTime.now().millisecondsSinceEpoch / 1000.0;
+    _frameTime = currentTime - _lastFrameTime;
+    _lastFrameTime = currentTime;
+
+    // Clamp frame time to prevent spiral of death
+    if (_frameTime > 1.0 / 30.0) {
+      _frameTime = 1.0 / 30.0; // Cap at 30 FPS minimum
+    }
+
+    // Update FPS counter every second
+    _frameCount++;
+    if (currentTime - _lastFpsUpdate >= 1.0) {
+      _fps = _frameCount / (currentTime - _lastFpsUpdate);
+      _frameCount = 0;
+      _lastFpsUpdate = currentTime;
+    }
+
+    // Update game logic with actual frame time
     onUpdate?.call();
 
     // Render frame
@@ -67,4 +93,7 @@ class GameLoop {
   bool get isRunning => _isRunning;
   bool get isPaused => _isPaused;
   double get targetFPS => AppConstants.targetFPS;
+  double get currentFPS => _fps;
+  double get frameTime => _frameTime;
+  int get frameCount => _frameCount;
 }
