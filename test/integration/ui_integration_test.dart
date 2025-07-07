@@ -5,6 +5,8 @@ import 'package:techtical_stand/main.dart';
 import 'package:techtical_stand/features/game/presentation/screens/main_menu_screen.dart';
 import 'package:techtical_stand/features/game/presentation/screens/level_selection_screen.dart';
 import 'package:techtical_stand/features/game/presentation/screens/achievements_screen.dart';
+import 'package:techtical_stand/features/game/presentation/screens/settings_screen.dart';
+import 'package:techtical_stand/core/widgets/tutorial_overlay.dart';
 import 'package:techtical_stand/core/audio/audio_manager.dart';
 import 'package:techtical_stand/features/game/domain/models/level.dart';
 import 'package:techtical_stand/features/game/presentation/providers/level_provider.dart';
@@ -104,6 +106,55 @@ void main() {
 
         // Verify achievements screen elements
         expect(find.text('Achievements'), findsOneWidget);
+      });
+
+      testWidgets('Settings button navigates to settings', (
+        WidgetTester tester,
+      ) async {
+        // Test the settings screen directly
+        await tester.pumpWidget(
+          const ProviderScope(child: MaterialApp(home: SettingsScreen())),
+        );
+        await tester.pump();
+
+        // Verify settings screen elements
+        expect(find.text('Settings'), findsOneWidget);
+        expect(find.text('Audio'), findsOneWidget);
+        expect(find.text('Graphics'), findsOneWidget);
+        expect(find.text('Accessibility'), findsOneWidget);
+        expect(find.text('Game'), findsOneWidget);
+      });
+
+      testWidgets('Tutorial button exists in main menu', (
+        WidgetTester tester,
+      ) async {
+        await tester.pumpWidget(
+          const ProviderScope(child: TechticalStandApp()),
+        );
+        await tester.pump();
+
+        // Verify tutorial button exists
+        expect(find.text('Tutorial'), findsOneWidget);
+      });
+
+      testWidgets('Tutorial overlay can be created', (
+        WidgetTester tester,
+      ) async {
+        final tutorialSteps = TutorialManager.instance.getMainGameTutorial();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: TutorialOverlay(steps: tutorialSteps, onComplete: () {}),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // Verify tutorial elements are present
+        expect(find.text('Welcome to Techtical Defense!'), findsOneWidget);
+        expect(find.text('Next'), findsOneWidget);
+        expect(find.text('Skip Tutorial'), findsOneWidget);
       });
     });
 
