@@ -184,6 +184,13 @@ abstract class Projectile extends Entity {
       position.y + direction.y * moveDistance,
     );
 
+    // Debug: Log projectile movement occasionally
+    if (DateTime.now().millisecondsSinceEpoch % 3000 < 100) {
+      print(
+        'Projectile $type: speed=$speed, deltaTime=$deltaTime, moveDistance=${moveDistance.toStringAsFixed(2)}',
+      );
+    }
+
     // Create trail effect periodically
     lastTrailTime += deltaTime;
     if (lastTrailTime >= 0.05) {

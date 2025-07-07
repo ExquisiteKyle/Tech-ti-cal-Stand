@@ -311,7 +311,8 @@ class _GameEngineState extends ConsumerState<GameEngine> {
     final gameStateNotifier = ref.read(gameStateProvider.notifier);
 
     // Use actual frame time from game loop for smooth 60 FPS
-    final deltaTime = _gameLoop.frameTime;
+    // Apply game speed multiplier to delta time
+    final deltaTime = _gameLoop.frameTime * gameState.gameSpeed;
 
     // Always update entity manager for additions/removals (towers placed during prep)
     // but only update entity logic when game is playing
@@ -326,6 +327,7 @@ class _GameEngineState extends ConsumerState<GameEngine> {
     if (gameState.isPaused || !gameState.isPlaying) return;
 
     // Update wave and spawn enemies (optimized)
+    // Note: deltaTime already includes game speed multiplier
     final newEnemies = _waveManager.updateWave(deltaTime, _currentPath);
     if (newEnemies.isNotEmpty) {
       // Debug: print('Wave ${_waveManager.currentWaveNumber}: Spawning ${newEnemies.length} enemies');
@@ -377,7 +379,16 @@ class _GameEngineState extends ConsumerState<GameEngine> {
     }
 
     // Update all entities
+    // Note: deltaTime already includes game speed multiplier
     _entityManager.update(deltaTime);
+
+    // Debug: Log game speed and deltaTime occasionally
+    if (_gameLoop.frameCount % 180 == 0) {
+      // Every 3 seconds at 60fps
+      print(
+        'Game speed: ${gameState.gameSpeed}x, deltaTime: ${deltaTime.toStringAsFixed(4)}',
+      );
+    }
 
     // Check collisions (optimized)
     _entityManager.checkCollisions();
