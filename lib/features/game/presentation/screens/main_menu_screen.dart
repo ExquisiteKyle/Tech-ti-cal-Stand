@@ -91,19 +91,16 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
             child: ScaleTransition(
               scale: _scaleAnimation,
               child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 40),
-                      _buildTitle(),
-                      const SizedBox(height: 40),
-                      _buildMenuButtons(),
-                      const SizedBox(height: 40),
-                      _buildFooter(),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    _buildTitle(),
+                    const SizedBox(height: 20),
+                    Expanded(child: _buildMenuButtons()),
+                    const SizedBox(height: 16),
+                    _buildFooter(),
+                  ],
                 ),
               ),
             ),
@@ -117,15 +114,15 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
@@ -134,7 +131,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
               Text(
                 'Techtical Defense',
                 style: TextStyle(
-                  fontSize: 36,
+                  fontSize: 32,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textAccent,
                   shadows: [
@@ -147,11 +144,11 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 'Strategic Tower Defense',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w500,
                 ),
@@ -160,7 +157,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
         _buildProgressIndicator(),
       ],
     );
@@ -179,24 +176,24 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
 
             if (progress > 0) {
               return Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.8),
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   children: [
                     Text(
                       'Progress: $completedLevels/$totalLevels levels',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: AppColors.primary,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                       child: LinearProgressIndicator(
                         value: progress,
                         backgroundColor: AppColors.primary.withValues(
@@ -205,7 +202,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
                         valueColor: AlwaysStoppedAnimation<Color>(
                           AppColors.secondary,
                         ),
-                        minHeight: 6,
+                        minHeight: 5,
                       ),
                     ),
                   ],
@@ -222,57 +219,59 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
   }
 
   Widget _buildMenuButtons() {
-    return Column(
-      children: [
-        _buildMenuButton(
-          key: const Key('mainMenu_quickPlay'),
-          title: 'Quick Play',
-          subtitle: 'Start first level',
-          icon: Icons.play_arrow,
-          onTap: _startQuickPlay,
-          isPrimary: true,
-        ),
-        const SizedBox(height: 16),
-        _buildMenuButton(
-          key: const Key('mainMenu_levelSelect'),
-          title: 'Level Select',
-          subtitle: 'Choose your challenge',
-          icon: Icons.map,
-          onTap: _openLevelSelection,
-        ),
-        const SizedBox(height: 16),
-        _buildMenuButton(
-          key: const Key('mainMenu_achievements'),
-          title: 'Achievements',
-          subtitle: 'View your accomplishments',
-          icon: Icons.emoji_events,
-          onTap: _showAchievements,
-        ),
-        const SizedBox(height: 16),
-        _buildMenuButton(
-          key: const Key('mainMenu_statistics'),
-          title: 'Statistics',
-          subtitle: 'View your progress',
-          icon: Icons.analytics,
-          onTap: _showStatistics,
-        ),
-        const SizedBox(height: 16),
-        _buildMenuButton(
-          key: const Key('mainMenu_tutorial'),
-          title: 'Tutorial',
-          subtitle: 'Learn the basics',
-          icon: Icons.school,
-          onTap: _showTutorial,
-        ),
-        const SizedBox(height: 16),
-        _buildMenuButton(
-          key: const Key('mainMenu_settings'),
-          title: 'Settings',
-          subtitle: 'Audio and preferences',
-          icon: Icons.settings,
-          onTap: _showSettings,
-        ),
-      ],
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          _buildMenuButton(
+            key: const Key('mainMenu_quickPlay'),
+            title: 'Quick Play',
+            subtitle: 'Start first level',
+            icon: Icons.play_arrow,
+            onTap: _startQuickPlay,
+            isPrimary: true,
+          ),
+          const SizedBox(height: 12),
+          _buildMenuButton(
+            key: const Key('mainMenu_levelSelect'),
+            title: 'Level Select',
+            subtitle: 'Choose your challenge',
+            icon: Icons.map,
+            onTap: _openLevelSelection,
+          ),
+          const SizedBox(height: 12),
+          _buildMenuButton(
+            key: const Key('mainMenu_achievements'),
+            title: 'Achievements',
+            subtitle: 'View your accomplishments',
+            icon: Icons.emoji_events,
+            onTap: _showAchievements,
+          ),
+          const SizedBox(height: 12),
+          _buildMenuButton(
+            key: const Key('mainMenu_statistics'),
+            title: 'Statistics',
+            subtitle: 'View your progress',
+            icon: Icons.analytics,
+            onTap: _showStatistics,
+          ),
+          const SizedBox(height: 12),
+          _buildMenuButton(
+            key: const Key('mainMenu_tutorial'),
+            title: 'Tutorial',
+            subtitle: 'Learn the basics',
+            icon: Icons.school,
+            onTap: _showTutorial,
+          ),
+          const SizedBox(height: 12),
+          _buildMenuButton(
+            key: const Key('mainMenu_settings'),
+            title: 'Settings',
+            subtitle: 'Audio and preferences',
+            icon: Icons.settings,
+            onTap: _showSettings,
+          ),
+        ],
+      ),
     );
   }
 
@@ -295,7 +294,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
         borderRadius: BorderRadius.circular(16),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -310,26 +309,26 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
                       Colors.white.withValues(alpha: 0.7),
                     ],
             ),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
                 color: isPrimary
                     ? AppColors.secondary.withValues(alpha: 0.3)
                     : Colors.black.withValues(alpha: 0.1),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: isPrimary
                       ? AppColors.buttonPrimary.withValues(alpha: 0.9)
                       : AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: isPrimary
                         ? AppColors.textAccent.withValues(alpha: 0.3)
@@ -339,13 +338,13 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
                 ),
                 child: Icon(
                   icon,
-                  size: 32,
+                  size: 28,
                   color: isPrimary
                       ? AppColors.textAccent
                       : AppColors.textOnPastel,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,18 +352,18 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
                     Text(
                       title,
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: isPrimary
                             ? AppColors.textAccent
                             : AppColors.textOnPastel,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         color: isPrimary
                             ? AppColors.textAccent.withValues(alpha: 0.8)
                             : AppColors.textSecondary,
@@ -394,15 +393,15 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
         Text(
           'v4.3.0 - Multiple Levels Update',
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 11,
             color: Colors.white.withValues(alpha: 0.7),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Text(
           'Built with Flutter & Riverpod',
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 11,
             color: Colors.white.withValues(alpha: 0.5),
           ),
         ),
