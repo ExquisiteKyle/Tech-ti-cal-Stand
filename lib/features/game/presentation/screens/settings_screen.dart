@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/audio/audio_manager.dart';
 import '../../../../core/widgets/audio_settings_panel.dart';
+import '../providers/settings_provider.dart';
 
 /// Comprehensive settings screen with all game preferences
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -19,22 +20,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // Settings state
-  bool _showFPS = false;
-  bool _showDamageNumbers = true;
-  bool _showParticleEffects = true;
-  bool _enableHapticFeedback = true;
-  String _colorBlindType = 'normal';
-  bool _highContrast = false;
-  double _textScaleFactor = 1.0;
-  bool _autoSave = true;
-  bool _showTutorials = true;
-
   @override
   void initState() {
     super.initState();
     _setupAnimations();
-    _loadSettings();
   }
 
   void _setupAnimations() {
@@ -59,20 +48,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
 
     _fadeController.forward();
     _slideController.forward();
-  }
-
-  Future<void> _loadSettings() async {
-    // Load settings from SharedPreferences (placeholder for now)
-    // In a real implementation, these would be loaded from persistent storage
-    setState(() {
-      // Default values
-    });
-  }
-
-  Future<void> _saveSettings() async {
-    // Save settings to SharedPreferences
-    // In a real implementation, these would be saved to persistent storage
-    AudioManager().playSfx(AudioEvent.buttonClick);
   }
 
   @override
@@ -197,6 +172,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   }
 
   Widget _buildGraphicsSection() {
+    final settings = ref.watch(settingsProvider);
+
     return _buildSettingsCard(
       title: 'Graphics',
       icon: Icons.visibility,
@@ -205,28 +182,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
         _buildSwitchTile(
           title: 'Show FPS Counter',
           subtitle: 'Display frame rate during gameplay',
-          value: _showFPS,
+          value: settings.showFPS,
           onChanged: (value) {
-            setState(() => _showFPS = value);
-            _saveSettings();
+            ref.read(settingsProvider.notifier).setShowFPS(value);
+            AudioManager().playSfx(AudioEvent.buttonClick);
           },
         ),
         _buildSwitchTile(
           title: 'Damage Numbers',
           subtitle: 'Show damage dealt to enemies',
-          value: _showDamageNumbers,
+          value: settings.showDamageNumbers,
           onChanged: (value) {
-            setState(() => _showDamageNumbers = value);
-            _saveSettings();
+            ref.read(settingsProvider.notifier).setShowDamageNumbers(value);
+            AudioManager().playSfx(AudioEvent.buttonClick);
           },
         ),
         _buildSwitchTile(
           title: 'Particle Effects',
           subtitle: 'Show visual effects and animations',
-          value: _showParticleEffects,
+          value: settings.showParticleEffects,
           onChanged: (value) {
-            setState(() => _showParticleEffects = value);
-            _saveSettings();
+            ref.read(settingsProvider.notifier).setShowParticleEffects(value);
+            AudioManager().playSfx(AudioEvent.buttonClick);
           },
         ),
       ],
@@ -234,6 +211,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   }
 
   Widget _buildAccessibilitySection() {
+    final settings = ref.watch(settingsProvider);
+
     return _buildSettingsCard(
       title: 'Accessibility',
       icon: Icons.accessibility,
@@ -242,7 +221,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
         _buildDropdownTile(
           title: 'Color Blind Support',
           subtitle: 'Choose color scheme for better visibility',
-          value: _colorBlindType,
+          value: settings.colorBlindType,
           items: const [
             {'value': 'normal', 'label': 'Normal Vision'},
             {'value': 'deuteranopia', 'label': 'Deuteranopia (Red-Green)'},
@@ -250,38 +229,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
             {'value': 'tritanopia', 'label': 'Tritanopia (Blue-Yellow)'},
           ],
           onChanged: (value) {
-            setState(() => _colorBlindType = value);
-            _saveSettings();
+            ref.read(settingsProvider.notifier).setColorBlindType(value);
+            AudioManager().playSfx(AudioEvent.buttonClick);
           },
         ),
         _buildSwitchTile(
           title: 'High Contrast',
           subtitle: 'Maximum contrast for better visibility',
-          value: _highContrast,
+          value: settings.highContrast,
           onChanged: (value) {
-            setState(() => _highContrast = value);
-            _saveSettings();
+            ref.read(settingsProvider.notifier).setHighContrast(value);
+            AudioManager().playSfx(AudioEvent.buttonClick);
           },
         ),
         _buildSwitchTile(
           title: 'Haptic Feedback',
           subtitle: 'Vibration feedback on mobile devices',
-          value: _enableHapticFeedback,
+          value: settings.enableHapticFeedback,
           onChanged: (value) {
-            setState(() => _enableHapticFeedback = value);
-            _saveSettings();
+            ref.read(settingsProvider.notifier).setEnableHapticFeedback(value);
+            AudioManager().playSfx(AudioEvent.buttonClick);
           },
         ),
         _buildSliderTile(
           title: 'Text Size',
           subtitle: 'Adjust text size for better readability',
-          value: _textScaleFactor,
+          value: settings.textScaleFactor,
           min: 0.8,
           max: 1.5,
           divisions: 7,
           onChanged: (value) {
-            setState(() => _textScaleFactor = value);
-            _saveSettings();
+            ref.read(settingsProvider.notifier).setTextScaleFactor(value);
+            AudioManager().playSfx(AudioEvent.buttonClick);
           },
         ),
       ],
@@ -289,6 +268,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   }
 
   Widget _buildGameSection() {
+    final settings = ref.watch(settingsProvider);
+
     return _buildSettingsCard(
       title: 'Game',
       icon: Icons.games,
@@ -297,19 +278,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
         _buildSwitchTile(
           title: 'Auto Save',
           subtitle: 'Automatically save game progress',
-          value: _autoSave,
+          value: settings.autoSave,
           onChanged: (value) {
-            setState(() => _autoSave = value);
-            _saveSettings();
+            ref.read(settingsProvider.notifier).setAutoSave(value);
+            AudioManager().playSfx(AudioEvent.buttonClick);
           },
         ),
         _buildSwitchTile(
           title: 'Show Tutorials',
           subtitle: 'Display helpful tips and guidance',
-          value: _showTutorials,
+          value: settings.showTutorials,
           onChanged: (value) {
-            setState(() => _showTutorials = value);
-            _saveSettings();
+            ref.read(settingsProvider.notifier).setShowTutorials(value);
+            AudioManager().playSfx(AudioEvent.buttonClick);
           },
         ),
         _buildSettingTile(
@@ -715,16 +696,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   }
 
   void _resetToDefaults() {
-    setState(() {
-      _showFPS = false;
-      _showDamageNumbers = true;
-      _showParticleEffects = true;
-      _enableHapticFeedback = true;
-      _textScaleFactor = 1.0;
-      _autoSave = true;
-      _showTutorials = true;
-    });
-    _saveSettings();
+    ref.read(settingsProvider.notifier).resetToDefaults();
   }
 
   void _resetProgress() {

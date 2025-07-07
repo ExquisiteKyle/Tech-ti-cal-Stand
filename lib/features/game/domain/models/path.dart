@@ -403,7 +403,7 @@ class LevelPaths {
       ),
       Waypoint(
         position: _snapToTileCenter(
-          rightBoundary,
+          rightBoundary - 40, // Move 1 tile (40px) before the right boundary
           topBoundary + playableHeight * 0.6,
           screenWidth,
           screenHeight,

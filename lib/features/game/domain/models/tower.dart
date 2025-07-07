@@ -282,9 +282,10 @@ abstract class Tower extends Entity {
 
   /// Render tower with selection indicator
   void renderWithSelection(Canvas canvas, Size canvasSize, bool isSelected) {
+    final towerRadius = size.x / 2 + (upgradeLevel * 2);
+
     // Draw selection indicator first (so it's behind the tower)
     if (isSelected) {
-      final towerRadius = size.x / 2 + (upgradeLevel * 2);
       final selectionPaint = Paint()
         ..color = Colors.lightBlue.withAlpha(150)
         ..style = PaintingStyle.stroke
@@ -303,6 +304,18 @@ abstract class Tower extends Entity {
         ..strokeWidth = 2;
 
       canvas.drawCircle(Offset(center.x, center.y), range, rangePaint);
+    } else {
+      // Draw subtle hover effect for all towers to indicate they're clickable
+      final hoverPaint = Paint()
+        ..color = Colors.white.withAlpha(30)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2;
+
+      canvas.drawCircle(
+        Offset(center.x, center.y),
+        towerRadius + 4,
+        hoverPaint,
+      );
     }
 
     // Render normal tower

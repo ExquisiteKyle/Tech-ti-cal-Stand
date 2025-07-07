@@ -4,7 +4,6 @@ import '../theme/app_colors.dart';
 import '../audio/audio_manager.dart';
 import '../../features/game/domain/models/tower.dart';
 import '../../features/game/presentation/providers/game_state_provider.dart';
-import '../../features/game/presentation/providers/tower_selection_provider.dart';
 
 /// Tower upgrade dialog that shows as a popup when a tower is selected
 class TowerUpgradeDialog extends ConsumerStatefulWidget {
@@ -539,14 +538,11 @@ class _TowerUpgradeDialogState extends ConsumerState<TowerUpgradeDialog>
       // Perform the upgrade
       widget.tower.upgrade(path);
 
-      // Add a small scale animation before closing
+      // Add a small scale animation for feedback
       _animationController.reverse().then((_) {
         if (mounted) {
-          // Close the dialog
-          Navigator.of(context).pop();
-
-          // Clear tower selection
-          ref.read(towerSelectionProvider.notifier).clearSelection();
+          // Re-open the animation for feedback, but do NOT close the dialog
+          _animationController.forward();
         }
       });
     }

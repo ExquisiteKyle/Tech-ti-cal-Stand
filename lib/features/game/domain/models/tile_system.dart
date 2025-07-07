@@ -127,10 +127,10 @@ class TileSystem {
 
   /// Check if a tile is at the edge of the viewport and should be marked invalid
   bool _isEdgeTile(int x, int y, int cols, int rows, Size screenSize) {
-    // Mark edge tiles as invalid for safety margin
-    // Since we're using a centered grid with full tiles only,
-    // we just need to check if the tile is at the grid boundary
-    return x == 0 || x == cols - 1 || y == 0 || y == rows - 1;
+    // Only mark the outermost edge tiles as invalid for safety margin
+    // This is less restrictive than marking the entire border
+    return x == 0 ||
+        x == cols - 1; // Only mark left and right edges, not top/bottom
   }
 
   /// Check if a tile position is within UI areas and should be marked invalid
@@ -140,14 +140,16 @@ class TileSystem {
     double topUIHeight,
     double bottomUIHeight,
   ) {
-    // Check if tile is in top UI area
-    if (tilePosition.y <= topUIHeight) {
+    // Check if tile is in top UI area - be more conservative
+    if (tilePosition.y <= topUIHeight + 10) {
+      // Added 10px buffer
       return true;
     }
 
     // Check if tile is in bottom UI area - be more conservative to allow more playable space
     // Only mark tiles as invalid if they're clearly in the UI area
-    if (tilePosition.y >= screenSize.height - bottomUIHeight + 40) {
+    if (tilePosition.y >= screenSize.height - bottomUIHeight + 20) {
+      // Reduced from 40 to 20
       return true;
     }
 
@@ -160,14 +162,16 @@ class TileSystem {
     final firstPlayableY = topUIHeight + tileSize;
     final bufferRowY = _offsetY + (gridY * tileSize) + (tileSize / 2);
 
-    // Mark the row that's one row above the first playable row as invalid
-    return bufferRowY >= (firstPlayableY - tileSize) &&
-        bufferRowY < firstPlayableY;
+    // Mark only the row that's exactly one row above the first playable row as invalid
+    // This is more precise than the previous logic
+    return bufferRowY >= (firstPlayableY - tileSize - 5) &&
+        bufferRowY < (firstPlayableY - tileSize + 5);
   }
 
   /// Check if a world position is on the path
   bool _isOnPath(Vector2 position, List<Vector2> pathPoints) {
-    const pathWidth = 15.0; // Reduced path width for testing
+    const pathWidth =
+        25.0; // Increased from 15.0 to 25.0 for more reasonable path width
 
     for (int i = 0; i < pathPoints.length - 1; i++) {
       final start = pathPoints[i];

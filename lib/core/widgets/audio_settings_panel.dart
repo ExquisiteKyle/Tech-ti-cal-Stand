@@ -89,9 +89,9 @@ class _AudioSettingsPanelState extends State<AudioSettingsPanel>
               backgroundColor: Colors.transparent,
               insetPadding: const EdgeInsets.all(16),
               child: Container(
-                constraints: const BoxConstraints(
-                  maxWidth: 400,
-                  maxHeight: 500,
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.9,
+                  maxHeight: MediaQuery.of(context).size.height * 0.8,
                 ),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(

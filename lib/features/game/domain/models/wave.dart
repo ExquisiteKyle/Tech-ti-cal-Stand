@@ -138,23 +138,22 @@ class WaveManager {
         .min(0.3, math.max(0, (waveNumber - 5) * 0.02))
         .toDouble();
 
-    // Generate enemy spawns
+    // Generate enemy spawns with exactly 1 second apart
     for (int i = 0; i < baseEnemies; i++) {
       final enemyType = _selectEnemyType(goblinChance, orcChance, trollChance);
-      final spawnTime = i.toDouble() * 0.8; // 800ms between spawns
 
+      // Each enemy spawns exactly 1 second after the previous one
+      final spawnTime = i.toDouble(); // 0.0, 1.0, 2.0, 3.0, etc.
       spawns.add(EnemySpawn(enemyType: enemyType, spawnTime: spawnTime));
     }
 
     // Add boss every 5 waves
     if (waveNumber % 5 == 0) {
+      // Boss spawns 1 second after the last enemy
+      final bossSpawnTime = baseEnemies
+          .toDouble(); // 1 second after the last minion
       spawns.add(
-        EnemySpawn(
-          enemyType: EnemyType.boss,
-          spawnTime:
-              baseEnemies.toDouble() * 0.8 +
-              2.0, // Spawn boss 2 seconds after last enemy
-        ),
+        EnemySpawn(enemyType: EnemyType.boss, spawnTime: bossSpawnTime),
       );
     }
 

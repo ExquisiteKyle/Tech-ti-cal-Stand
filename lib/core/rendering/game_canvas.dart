@@ -38,7 +38,7 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
   late GamePath _currentPath;
   Vector2? _towerPreviewPosition;
   DateTime? _lastTowerClickTime;
-  static const Duration _clickThrottleDuration = Duration(milliseconds: 300);
+  static const Duration _clickThrottleDuration = Duration(milliseconds: 150);
 
   @override
   void initState() {
@@ -225,18 +225,12 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
             now.difference(_lastTowerClickTime!) > _clickThrottleDuration) {
           _lastTowerClickTime = now;
 
-          // Visual feedback handled by tower selection state
-
-          // Select tower for upgrade
+          // Select tower for upgrade immediately
           towerSelectionNotifier.selectExistingTower(clickedTower);
 
-          // Brief pause to make interaction feel more responsive
-          Future.delayed(const Duration(milliseconds: 50), () {
-            if (mounted) {
-              setState(() {
-                // This small setState helps ensure the UI updates immediately
-              });
-            }
+          // Immediate visual feedback
+          setState(() {
+            // Force immediate UI update
           });
 
           // Add haptic feedback for better user experience
@@ -284,30 +278,34 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
   }
 
   void _placeTower(Vector2 position, TowerType towerType) {
-    // Debug: _placeTower called: position=$position, towerType=$towerType
+    print('_placeTower called: position=$position, towerType=$towerType');
 
     final gameState = ref.read(gameStateProvider);
     final tileSystem = gameState.tileSystem;
 
     if (tileSystem == null) {
-      // Debug: Tower placement failed: No tile system available
+      print('Tower placement failed: No tile system available');
       return;
     }
 
     // Get the tile at this position
     final tile = tileSystem.getTileAtWorldPosition(position);
-    // Debug: _placeTower: tile found=${tile != null}, tile position=${tile?.worldPosition}
+    print(
+      '_placeTower: tile found=${tile != null}, tile position=${tile?.worldPosition}',
+    );
 
     if (tile == null) {
-      // Debug: Tower placement failed: No tile found at position $position
+      print('Tower placement failed: No tile found at position $position');
       return;
     }
 
     final canPlace = tileSystem.canPlaceTower(tile.gridX, tile.gridY);
-    // Debug: _placeTower: canPlaceTower=$canPlace, tile state=${tile.state}
+    print('_placeTower: canPlaceTower=$canPlace, tile state=${tile.state}');
 
     if (!canPlace) {
-      // Debug: Tower placement failed: Cannot place tower on tile (${tile.gridX}, ${tile.gridY})
+      print(
+        'Tower placement failed: Cannot place tower on tile (${tile.gridX}, ${tile.gridY})',
+      );
       return;
     }
 
@@ -316,15 +314,15 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
 
     // Get tower cost and check affordability
     int cost = _getTowerCost(towerType);
+    print('Tower cost: $cost, current gold: ${gameState.gold}');
     if (!gameStateNotifier.spendGold(cost)) {
-      // Debug: Tower placement failed: Insufficient gold
+      print('Tower placement failed: Insufficient gold');
       return;
     }
 
-    // Debug: Tower placement successful at tile: (${tile.gridX}, ${tile.gridY})
+    print('Tower placement successful at tile: (${tile.gridX}, ${tile.gridY})');
 
-    // Use tile center position for precise placement
-    // Adjust position so tower center aligns with tile center
+    // Create tower at tile center position
     Tower? tower;
     switch (towerType) {
       case TowerType.archer:
@@ -341,14 +339,13 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
         break;
     }
 
-    // Adjust tower position so its center aligns with tile center
-    final adjustedPosition = Vector2(
+    // Ensure tower is centered on the tile
+    tower.position = Vector2(
       tile.worldPosition.x - tower.size.x / 2,
       tile.worldPosition.y - tower.size.y / 2,
     );
-    tower.position = adjustedPosition;
 
-    // Debug: Tower created: ${tower.name} at position ${tower.position}
+    print('Tower created: ${tower.name} at position ${tower.position}');
 
     // Set up projectile creation callback
     tower.onProjectileCreated = (projectile) {
@@ -361,7 +358,9 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
     };
 
     widget.entityManager.addEntity(tower);
-    // Debug: Tower added to entity manager. Total entities: ${widget.entityManager.entities.length}
+    print(
+      'Tower added to entity manager. Total entities: ${widget.entityManager.entities.length}',
+    );
 
     // Play tower placement sound
     AudioManager().playSfx(AudioEvent.towerPlace);
@@ -369,9 +368,11 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
     // Update tile system to mark tile as occupied
     try {
       tileSystem.placeTower(tile.gridX, tile.gridY, tower.id);
-      // Debug: Tile system updated: tile (${tile.gridX}, ${tile.gridY}) marked as occupied
+      print(
+        'Tile system updated: tile (${tile.gridX}, ${tile.gridY}) marked as occupied',
+      );
     } catch (e) {
-      // Debug: Tile system update error: $e
+      print('Tile system update error: $e');
     }
 
     // Clear selection
@@ -379,6 +380,8 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
     setState(() {
       _towerPreviewPosition = null;
     });
+
+    print('Tower placement completed successfully');
   }
 
   int _getTowerCost(TowerType towerType) {
@@ -400,7 +403,7 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
     final towers = widget.entityManager.getEntitiesOfType<Tower>();
 
     // Use a larger hit area for easier tower selection
-    const double hitAreaExpansion = 20.0; // Extra pixels around tower
+    const double hitAreaExpansion = 35.0; // Increased for better clickability
 
     // First pass: Check exact tower bounds for precise selection
     for (final tower in towers) {
@@ -411,15 +414,12 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
 
     // Second pass: Check expanded bounds for easier selection
     for (final tower in towers) {
-      // Create expanded hit area
-      final expandedBounds = Rect.fromLTWH(
-        tower.position.x - hitAreaExpansion,
-        tower.position.y - hitAreaExpansion,
-        tower.size.x + (hitAreaExpansion * 2),
-        tower.size.y + (hitAreaExpansion * 2),
-      );
+      // Create expanded hit area using tower center for better accuracy
+      final towerCenter = tower.center;
+      final expandedRadius = (tower.size.x / 2) + hitAreaExpansion;
 
-      if (expandedBounds.contains(Offset(position.x, position.y))) {
+      // Check if click is within expanded radius of tower center
+      if (position.distanceTo(towerCenter) <= expandedRadius) {
         return tower;
       }
     }
@@ -457,9 +457,9 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
         final cost = _getTowerCost(data.data);
         final canAfford = gameState.canAfford(cost);
 
-        // Also check if position is valid for tile placement
+        // Check if position is valid for tile placement
         final position = Vector2(data.offset.dx, data.offset.dy);
-        bool validPosition = true;
+        bool validPosition = false;
 
         try {
           final tileSystem = gameState.tileSystem;
@@ -467,50 +467,24 @@ class _GameCanvasState extends ConsumerState<GameCanvas> {
             final tile = tileSystem.getTileAtWorldPosition(position);
             if (tile != null) {
               final canPlace = tileSystem.canPlaceTower(tile.gridX, tile.gridY);
-              // Debug: Tile at (${tile.gridX}, ${tile.gridY}): state=${tile.state}, canPlace=$canPlace
               validPosition = canPlace;
-            } else {
-              // Debug: No tile found at position $position
-              validPosition = false;
             }
           }
         } catch (e) {
-          // If tile system access fails, fall back to allowing placement
-          validPosition = true;
-          // Debug: Tile validation error: $e
+          // If tile system access fails, don't allow placement
+          validPosition = false;
         }
 
-        // Debug: onWillAcceptWithDetails: tower=${data.data}, cost=$cost, gold=${gameState.gold}, canAfford=$canAfford, validPosition=$validPosition
         return canAfford && validPosition;
       },
       onAcceptWithDetails: (details) {
         final position = Vector2(details.offset.dx, details.offset.dy);
-        // Debug: onAcceptWithDetails called: position=$position, tower=${details.data}
+        print(
+          'onAcceptWithDetails called: position=$position, tower=${details.data}',
+        );
 
-        // Snap to tile center for precise placement
-        try {
-          final gameState = ref.read(gameStateProvider);
-          final tileSystem = gameState.tileSystem;
-          // Debug: Tile system available: ${tileSystem != null}
-
-          if (tileSystem != null) {
-            final tile = tileSystem.getTileAtWorldPosition(position);
-            // Debug: Found tile: ${tile != null}, position: ${tile?.worldPosition}
-            if (tile != null) {
-              // Debug: Placing tower at tile center: ${tile.worldPosition}
-              _placeTower(tile.worldPosition, details.data);
-            } else {
-              // Debug: No tile found, placing at original position
-              _placeTower(position, details.data);
-            }
-          } else {
-            // Debug: No tile system, placing at original position
-            _placeTower(position, details.data);
-          }
-        } catch (e) {
-          // Debug: Tile placement error: $e
-          _placeTower(position, details.data);
-        }
+        // Use the drag position directly for placement
+        _placeTower(position, details.data);
       },
       onMove: (details) {
         // Update preview position during drag
@@ -649,8 +623,8 @@ class GameCanvasPainter extends CustomPainter {
         ..style = PaintingStyle.fill;
 
       final highlightedTilePaint = Paint()
-        ..color = const Color(0xFFFFF5E8)
-            .withAlpha(150) // Soft pastel peach for highlighted tiles
+        ..color = Colors.lime
+            .withAlpha(200) // Bright lime green for highlighted tiles
         ..style = PaintingStyle.fill;
 
       final invalidTilePaint = Paint()
@@ -839,8 +813,10 @@ class GameCanvasPainter extends CustomPainter {
 
     // Choose colors based on validity and drag state
     Color previewColor = isValidPosition ? towerColor : Colors.red;
-    Color borderColor = isValidPosition ? towerColor : Colors.red;
-    Color rangeColor = isValidPosition ? towerColor : Colors.red;
+    Color borderColor = isValidPosition ? Colors.lime : Colors.red;
+    Color rangeColor = isValidPosition
+        ? Colors.lime.withAlpha(100)
+        : Colors.red.withAlpha(100);
 
     // Different opacity for drag vs select
     int alphaLevel = isDragActive ? 200 : 150;
@@ -869,7 +845,7 @@ class GameCanvasPainter extends CustomPainter {
     // Draw validity indicator when dragging
     if (isDragActive) {
       final validityPaint = Paint()
-        ..color = isValidPosition ? Colors.green : Colors.red
+        ..color = isValidPosition ? Colors.lime : Colors.red
         ..style = PaintingStyle.stroke
         ..strokeWidth = 4;
 

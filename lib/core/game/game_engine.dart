@@ -12,6 +12,7 @@ import '../widgets/performance_monitor.dart';
 import '../audio/audio_manager.dart';
 import '../../features/game/presentation/providers/game_state_provider.dart';
 import '../../features/game/presentation/providers/tower_selection_provider.dart';
+import '../../features/game/presentation/providers/settings_provider.dart';
 
 import '../../features/game/domain/models/game_state.dart';
 import '../../features/game/domain/models/tower.dart';
@@ -131,13 +132,15 @@ class _GameEngineState extends ConsumerState<GameEngine> {
   }
 
   Color _getBackgroundColor(Color color, bool canAfford, bool isHovered) {
-    if (!canAfford) return color.withValues(alpha: 0.4);
+    if (!canAfford) {
+      return color.withValues(alpha: 0.2); // More transparent when can't afford
+    }
     if (isHovered) return color.withValues(alpha: 0.9);
     return color.withValues(alpha: 0.8);
   }
 
   Color _getBorderColor(bool canAfford, bool isHovered) {
-    if (!canAfford) return AppColors.textSecondary;
+    if (!canAfford) return Colors.grey.shade600; // More prominent grey
     if (isHovered) return AppColors.textAccent;
     return AppColors.hudBorder;
   }
@@ -166,25 +169,25 @@ class _GameEngineState extends ConsumerState<GameEngine> {
   }
 
   Color _getIconColor(bool canAfford, bool isHovered) {
-    if (!canAfford) return AppColors.textSecondary;
+    if (!canAfford) return Colors.grey.shade600; // More prominent grey
     if (isHovered) return AppColors.textAccent;
     return AppColors.textOnPastel;
   }
 
   Color _getTextColor(bool canAfford, bool isHovered) {
-    if (!canAfford) return AppColors.textSecondary;
+    if (!canAfford) return Colors.grey.shade600; // More prominent grey
     if (isHovered) return AppColors.textAccent;
     return AppColors.textOnPastel;
   }
 
   Color _getDescriptionColor(bool canAfford, bool isHovered) {
-    if (!canAfford) return AppColors.textSecondary;
+    if (!canAfford) return Colors.grey.shade600; // More prominent grey
     if (isHovered) return AppColors.textOnPastel;
     return AppColors.textSecondary;
   }
 
   Color _getCostColor(bool canAfford, bool isHovered) {
-    if (!canAfford) return AppColors.textSecondary;
+    if (!canAfford) return Colors.grey.shade600; // More prominent grey
     if (isHovered) return AppColors.textAccent;
     return AppColors.textOnPastel;
   }
@@ -234,9 +237,9 @@ class _GameEngineState extends ConsumerState<GameEngine> {
       int tileX = ((x - offsetX) / tileSize).round();
       int tileY = ((y - offsetY) / tileSize).round();
 
-      // Ensure we don't use edge tiles (keep at least 1 tile margin)
-      tileX = tileX.clamp(1, cols - 2);
-      tileY = tileY.clamp(1, rows - 2);
+      // Allow edge tiles for path waypoints, but ensure they're within bounds
+      tileX = tileX.clamp(0, cols - 1);
+      tileY = tileY.clamp(0, rows - 1);
 
       // Return tile center position using the same calculation as TileSystem
       return Vector2(
@@ -296,22 +299,6 @@ class _GameEngineState extends ConsumerState<GameEngine> {
             topBoundary + playableHeight * 0.75,
           ),
           id: 'h3',
-        ),
-        // Move up vertically (to 40% from top) - snap to tile center
-        Waypoint(
-          position: snapToTileCenter(
-            leftBoundary + playableWidth * 0.75,
-            topBoundary + playableHeight * 0.4,
-          ),
-          id: 'v3',
-        ),
-        // Move right horizontally to end - snap to tile center
-        Waypoint(
-          position: snapToTileCenter(
-            rightBoundary,
-            topBoundary + playableHeight * 0.4,
-          ),
-          id: 'end',
         ),
       ],
     );
@@ -739,8 +726,9 @@ class _GameEngineState extends ConsumerState<GameEngine> {
             // Preparation Phase Overlay
             _buildPreparationOverlay(gameState, screenSize),
 
-            // Performance Monitor (debug)
-            PerformanceMonitor(gameLoop: _gameLoop),
+            // Performance Monitor (only show if enabled in settings)
+            if (ref.watch(showFPSProvider))
+              PerformanceMonitor(gameLoop: _gameLoop),
 
             // Game Over Dialog
             if (gameState.isGameOver)
@@ -793,13 +781,8 @@ class _GameEngineState extends ConsumerState<GameEngine> {
                             ),
                           ),
                         ),
-                        // Control buttons for small screens
-                        if (gameState.isPlaying) ...[
-                          _buildControlButtons(gameState),
-                          const SizedBox(width: 8),
-                        ],
-                        // Wave stats on the right
-                        _buildTopWaveStats(),
+                        // Combined wave stats and controls for small screens
+                        _buildCombinedTopUI(gameState, isCompact: true),
                       ],
                     ),
                   )
@@ -834,16 +817,11 @@ class _GameEngineState extends ConsumerState<GameEngine> {
                               ),
                             ),
                             const Spacer(),
-                            // Control buttons in the middle-right
-                            if (gameState.isPlaying) ...[
-                              _buildControlButtons(
-                                gameState,
-                                isCompact: isVeryNarrow,
-                              ),
-                              SizedBox(width: isVeryNarrow ? 6 : 12),
-                            ],
-                            // Wave stats on the right
-                            _buildTopWaveStats(isCompact: isVeryNarrow),
+                            // Combined wave stats and controls
+                            _buildCombinedTopUI(
+                              gameState,
+                              isCompact: isVeryNarrow,
+                            ),
                           ],
                         );
                       },
@@ -1262,7 +1240,7 @@ class _GameEngineState extends ConsumerState<GameEngine> {
     );
   }
 
-  Widget _buildTopWaveStats({bool isCompact = false}) {
+  Widget _buildCombinedTopUI(GameState gameState, {bool isCompact = false}) {
     final waveStats = _waveManager.getWaveStats();
     final progress = waveStats.isNotEmpty && waveStats['progress'] != null
         ? (waveStats['progress'] as double)
@@ -1285,6 +1263,7 @@ class _GameEngineState extends ConsumerState<GameEngine> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          // Wave info
           Text(
             'Wave ${_waveManager.currentWaveNumber}',
             style: TextStyle(
@@ -1294,6 +1273,7 @@ class _GameEngineState extends ConsumerState<GameEngine> {
             ),
           ),
           SizedBox(height: isCompact ? 2 : 4),
+          // Progress bar
           Container(
             width: isCompact ? 60 : 80,
             height: isCompact ? 3 : 4,
@@ -1312,6 +1292,11 @@ class _GameEngineState extends ConsumerState<GameEngine> {
               ),
             ),
           ),
+          // Controls row (pause, speed, etc.) - always visible
+          SizedBox(
+            height: isCompact ? 8 : 12,
+          ), // More gap between wave and controls
+          _buildControlButtons(gameState, isCompact: isCompact),
         ],
       ),
     );
@@ -1329,13 +1314,17 @@ class _GameEngineState extends ConsumerState<GameEngine> {
       decoration: BoxDecoration(
         color: canAfford
             ? Colors.white.withValues(alpha: 0.2)
-            : Colors.grey.withValues(alpha: 0.1),
+            : Colors.grey.withValues(
+                alpha: 0.05,
+              ), // More transparent when can't afford
         borderRadius: BorderRadius.circular(4),
       ),
       child: Icon(
         icon,
         size: 16,
-        color: canAfford ? AppColors.textOnPastel : AppColors.textSecondary,
+        color: canAfford
+            ? AppColors.textOnPastel
+            : Colors.grey.shade600, // More prominent grey
       ),
     );
 
