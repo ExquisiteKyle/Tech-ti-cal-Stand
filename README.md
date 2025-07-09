@@ -63,6 +63,10 @@ lib/
 - **Collision Detection**: Precise hit detection for projectiles and enemies
 - **Performance Optimization**: Efficient rendering and entity management
 
+**Gameplay Demo** - Defense
+
+<img src="assets/images/battle-demo-xs.gif" width="200" alt="Gameplay Demo">
+
 ## 🎨 UI/UX Design
 
 ### Visual Design Principles
@@ -158,6 +162,10 @@ flutter build web           # Web
 - ✅ Level selection and progression
 - ✅ Responsive UI design
 - ✅ Cross-platform compatibility
+
+**Main Menu Features** - Level selection, settings, and achievements
+
+<img src="assets/images/menu-demo-xs.gif" width="200" alt="Main Menu Demo">
 
 ### Technical Highlights
 
